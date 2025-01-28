@@ -45,9 +45,36 @@ class _DashboardPageState extends State<DashboardPage> {
     });
 
     try {
+      final token = await AuthService().getToken();
+      if (token == null || token.isEmpty) {
+        if (!mounted) {
+          return;
+        }
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+          (route) => false,
+        );
+        return;
+      }
+
       final resp = await http
-          .get(Uri.parse('$_baseUrl/investments'))
+          .get(
+            Uri.parse('$_baseUrl/investments'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
           .timeout(const Duration(seconds: 10));
+
+      if (resp.statusCode == 401) {
+        await AuthService().logout();
+        if (!mounted) {
+          return;
+        }
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+          (route) => false,
+        );
+        return;
+      }
 
       if (resp.statusCode == 200) {
         final list = jsonDecode(resp.body) as List<dynamic>;
