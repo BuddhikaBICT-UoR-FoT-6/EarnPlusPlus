@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'core/constants/app_strings.dart';
+import 'core/theme/app_theme.dart';
 import 'services/auth_service.dart';
 import 'screens/login_page.dart';
 import 'screens/dashboard_page.dart';
@@ -16,11 +18,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Investment Tracker',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
+      title: AppStrings.appName,
+      theme: AppTheme.light(),
       home: FutureBuilder<bool>(
         future: _isLoggedIn(),
         builder: (context, snapshot) {
