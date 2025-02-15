@@ -6,7 +6,14 @@ import '../config/app_config.dart';
 class AuthService {
   static const String _tokenKey =
       'auth_token'; // identify the token when saving it to the phone's storage
-  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  static const FlutterSecureStorage _secureStorage =
+      FlutterSecureStorage(); // instance of
+  // FlutterSecureStorage to handle secure storage operations such as saving,
+  // retrieving, and deleting the authentication token on the device securely
+  // using platform-specific secure storage mechanisms like Keychain on iOS and
+  // EncryptedSharedPreferences on Android to protect sensitive data like
+  //authentication tokens from unauthorized access and ensure that the user's
+  // login state is maintained securely across app sessions and app restarts
 
   Future<void> register({
     required String email,
@@ -51,7 +58,11 @@ class AuthService {
       throw Exception('Missing token in server response');
     }
 
-    await _secureStorage.write(key: _tokenKey, value: token);
+    await _secureStorage.write(key: _tokenKey, value: token); // saves the token
+    // to the phone's secure storage with the key _tokenKey for later retrieval
+    // when making authenticated requests to the backend, allowing the app to maintain
+    // the user's login state across sessions and app restarts without requiring
+    // the user to log in again until the token expires or is deleted
   }
 
   // retrieves the saved string from storage

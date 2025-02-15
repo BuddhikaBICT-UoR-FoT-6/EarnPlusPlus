@@ -1,7 +1,14 @@
 import 'package:mysql1/mysql1.dart';
 
+// This file defines the database schema and ensures that the necessary tables exist
 Future<void> ensureSchema(MySqlConnection conn,
     {required String dbName}) async {
+  // the ensureSchema function takes a MySqlConnection and a database name as parameters,
+  // and creates the database and tables if they do not already exist, including
+  // a migration for existing databases that may not have the user_id column
+  // in the investments table. It also ensures that the user_id column is added
+  // to the investments table if it does not exist, with a default value of
+  // 0 for backward compatibility with existing databases.
   await conn.query('CREATE DATABASE IF NOT EXISTS $dbName');
   await conn.query('USE $dbName');
 

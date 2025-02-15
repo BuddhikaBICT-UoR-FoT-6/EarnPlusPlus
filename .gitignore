@@ -23,3 +23,21 @@ server/pubspec.lock
 
 # IDE
 .vscode/
+
+# Unwanted scaffold/template files in this repo
+my_app/.gitignore
+my_app/.metadata
+my_app/README.md
+my_app/analysis_options.yaml
+
+# Unwanted platform folders for current scope
+my_app/android/
+my_app/ios/
+my_app/linux/
+my_app/macos/
+my_app/windows/
+my_app/web/
+my_app/test/
+
+# Server workspace currently excluded from this repo scope
+server/
