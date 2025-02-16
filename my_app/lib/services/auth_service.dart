@@ -74,6 +74,20 @@ class AuthService {
     return token;
   }
 
+  Future<String?> getValidToken() async {
+    final token = await getToken();
+    if (token == null) {
+      return null;
+    }
+
+    if (_isExpired(token)) {
+      await logout();
+      return null;
+    }
+
+    return token;
+  }
+
   // deletes the token from the phone
   Future<void> logout() async {
     await _secureStorage.delete(key: _tokenKey);
@@ -93,6 +107,28 @@ class AuthService {
       return responseBody;
     } catch (_) {
       return responseBody;
+    }
+  }
+
+  bool _isExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) {
+        return true;
+      }
+
+      final payloadBytes = base64Url.decode(base64Url.normalize(parts[1]));
+      final payload =
+          jsonDecode(utf8.decode(payloadBytes)) as Map<String, dynamic>;
+      final exp = payload['exp'];
+      if (exp is! num) {
+        return true;
+      }
+
+      final expiryMs = exp.toInt() * 1000;
+      return DateTime.now().millisecondsSinceEpoch >= expiryMs;
+    } catch (_) {
+      return true;
     }
   }
 }
