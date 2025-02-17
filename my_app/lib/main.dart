@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart'; // importing the Flutter material package
 // such as Scaffold, AppBar, and Buttons to use Material Design components and
 // widgets for building the user interface of the application
-import 'dart:convert'; // for encoding and decoding JSON data when communicating
-//  with APIs or parsing data from web services with the backend server
 import 'core/constants/app_strings.dart'; // importing application-wide string
 //constants for consistent text usage across the app, such as the app name and
 //  other static strings that may be used in the UI
@@ -32,7 +30,7 @@ class MyApp extends StatelessWidget {
   // logged in and display either the DashboardPage or the LoginPage accordingly.
 
   Future<bool> _isLoggedIn() async {
-    final token = await AuthService().getToken();
+    final token = await AuthService().getValidToken();
     return token != null && token.isNotEmpty;
   }
 
