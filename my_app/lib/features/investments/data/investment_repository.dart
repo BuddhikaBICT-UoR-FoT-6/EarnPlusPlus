@@ -28,7 +28,7 @@ class InvestmentRepository {
   // a GET request to the /investments endpoint with the token included in the
   // Authorization header.
   Future<List<Investment>> fetchInvestments() async {
-    final token = await _authService.getToken();
+    final token = await _authService.getValidToken();
     if (token == null || token.isEmpty) {
       throw const InvestmentUnauthorizedException();
     }
