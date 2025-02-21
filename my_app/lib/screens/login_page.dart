@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/validation/input_validators.dart';
 import '../services/auth_service.dart';
 import 'dashboard_page.dart';
 import 'register_page.dart';
@@ -199,16 +200,7 @@ class _LoginPageState extends State<LoginPage> {
                                 labelText: 'Email',
                                 prefixIcon: Icon(Icons.alternate_email),
                               ),
-                              validator: (value) {
-                                final v = (value ?? '').trim();
-                                if (v.isEmpty) {
-                                  return 'Email is required';
-                                }
-                                if (!v.contains('@')) {
-                                  return 'Enter a valid email';
-                                }
-                                return null;
-                              },
+                              validator: InputValidators.email,
                             ),
                             const SizedBox(height: 12),
                             TextFormField(
@@ -239,16 +231,7 @@ class _LoginPageState extends State<LoginPage> {
                                   },
                                 ),
                               ),
-                              validator: (value) {
-                                final v = value ?? '';
-                                if (v.isEmpty) {
-                                  return 'Password is required';
-                                }
-                                if (v.length < 6) {
-                                  return 'Password must be at least 6 characters';
-                                }
-                                return null;
-                              },
+                              validator: InputValidators.password,
                             ),
                           ],
                         ),
