@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/validation/input_validators.dart';
 import '../services/auth_service.dart';
 
 // provides a user interface for account creation
@@ -200,18 +201,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 Icons.alternate_email,
                               ), // icon that appears inside the text field to indicate it's for email input
                             ),
-                            validator: (value) {
-                              // validation logic for the email field,
-                              // which checks if the input is not empty and contains an "@" symbol to ensure it's a valid email format
-                              final v = (value ?? '').trim();
-                              if (v.isEmpty) {
-                                return 'Email is required';
-                              }
-                              if (!v.contains('@')) {
-                                return 'Enter a valid email';
-                              }
-                              return null;
-                            },
+                            validator: InputValidators.email,
                           ),
                           const SizedBox(height: 12),
                           // the password input field, which includes validation
@@ -248,16 +238,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 },
                               ),
                             ),
-                            validator: (value) {
-                              final v = value ?? '';
-                              if (v.isEmpty) {
-                                return 'Password is required';
-                              }
-                              if (v.length < 6) {
-                                return 'Password must be at least 6 characters';
-                              }
-                              return null;
-                            },
+                            validator: InputValidators.password,
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
@@ -293,16 +274,8 @@ class _RegisterPageState extends State<RegisterPage> {
                                 },
                               ),
                             ),
-                            validator: (value) {
-                              final v = value ?? '';
-                              if (v.isEmpty) {
-                                return 'Please confirm your password';
-                              }
-                              if (v != _passwordController.text) {
-                                return 'Passwords do not match';
-                              }
-                              return null;
-                            },
+                            validator: (value) => InputValidators
+                                .confirmPassword(value, _passwordController.text),
                           ),
                         ],
                       ),
