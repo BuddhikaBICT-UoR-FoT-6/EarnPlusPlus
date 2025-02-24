@@ -37,7 +37,6 @@ my_app/linux/
 my_app/macos/
 my_app/windows/
 my_app/web/
-my_app/test/
 
 # Server workspace currently excluded from this repo scope
 server/
