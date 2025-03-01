@@ -28,7 +28,13 @@ class InvestmentRepository {
   // a GET request to the /investments endpoint with the token included in the
   // Authorization header.
   Future<List<Investment>> fetchInvestments() async {
-    final token = await _authService.getValidToken();
+    final token = await _authService.getValidToken(); // retrieves a valid
+    // authentication token from the AuthService, which may involve checking if
+    // the token is expired and refreshing it if necessary to ensure that the
+    // request to the backend API is authenticated properly. This step is crucial
+    // for accessing protected endpoints that require user authentication and for
+    // maintaining the security of the application by ensuring that only
+    // authorized users can access sensitive data like investments.
     if (token == null || token.isEmpty) {
       throw const InvestmentUnauthorizedException();
     }

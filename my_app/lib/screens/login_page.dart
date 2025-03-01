@@ -200,7 +200,9 @@ class _LoginPageState extends State<LoginPage> {
                                 labelText: 'Email',
                                 prefixIcon: Icon(Icons.alternate_email),
                               ),
-                              validator: InputValidators.email,
+                              validator:
+                                  InputValidators.email, // uses the email
+                              // validator from the InputValidators class to validate
                             ),
                             const SizedBox(height: 12),
                             TextFormField(
@@ -231,7 +233,13 @@ class _LoginPageState extends State<LoginPage> {
                                   },
                                 ),
                               ),
-                              validator: InputValidators.password,
+                              validator:
+                                  InputValidators.password, // uses the password
+                              // validator from the InputValidators class to validate
+                              // the password field includes a suffix icon button
+                              //that toggles the obscureText property, allowing the
+                              // user to show or hide the password they have
+                              // entered for better usability
                             ),
                           ],
                         ),

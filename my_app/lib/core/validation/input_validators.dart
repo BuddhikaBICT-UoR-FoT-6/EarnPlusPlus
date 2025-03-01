@@ -1,4 +1,9 @@
+// This file contains input validation functions for the application, such as
+// validating email addresses, passwords, and other user inputs.
 class InputValidators {
+  // the email function takes a string input and checks if it is a valid email
+  // address. It trims the input, checks if it is empty, and verifies that it
+  //contains an '@' symbol.
   static String? email(String? value) {
     final v = (value ?? '').trim();
     if (v.isEmpty) return 'Email is required';

@@ -74,6 +74,10 @@ class AuthService {
     return token;
   }
 
+  // retrieves the saved token and checks if it has expired by decoding the token's
+  // payload and comparing the expiration time to the current time. If the token
+  // is valid and not expired, it returns the token; otherwise, it returns null,
+  // indicating that the user is not logged in or needs to log in again.
   Future<String?> getValidToken() async {
     final token = await getToken();
     if (token == null) {
@@ -110,17 +114,37 @@ class AuthService {
     }
   }
 
+  // checks if the token is expired by decoding the JWT token's payload and comparing
+  // the "exp" claim to the current time. If the token is malformed, missing the
+  // "exp" claim, or if the current time is past the expiration time, it returns
+  // true, indicating that the token is expired; otherwise, it returns false.
   bool _isExpired(String token) {
     try {
+      // JWT tokens consist of three parts separated by dots: header, payload,
+      // and signature. The payload is the second part, which contains the claims
+      // including the "exp" claim that indicates the token's expiration time.
       final parts = token.split('.');
       if (parts.length != 3) {
         return true;
       }
 
+      // The code splits the token into its parts, decodes the payload from
+      // Base64Url, and then parses the JSON to extract the expiration time.
       final payloadBytes = base64Url.decode(base64Url.normalize(parts[1]));
+
       final payload =
-          jsonDecode(utf8.decode(payloadBytes)) as Map<String, dynamic>;
-      final exp = payload['exp'];
+          jsonDecode(utf8.decode(payloadBytes))
+              as Map<String, dynamic>; // decodes
+      // the payload part of the JWT token from Base64Url and parses it as
+      // JSON to access the claims contained within the token, such as the
+      // "exp" claim for expiration time and other relevant information about
+      // the user's authentication state and permissions encoded in the token's payload.
+
+      final exp = payload['exp']; // the "exp" claim represents the expiration
+      // time of the token in seconds since the epoch (Unix time). The code checks
+      // if the "exp" claim is present and is a number, and then compares it to
+      // the current time to determine if the token has expired. If the "exp" claim
+      // is missing or not a valid number, it treats the token as expired for security reasons.
       if (exp is! num) {
         return true;
       }

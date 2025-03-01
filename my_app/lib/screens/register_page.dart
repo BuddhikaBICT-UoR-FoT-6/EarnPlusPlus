@@ -274,8 +274,11 @@ class _RegisterPageState extends State<RegisterPage> {
                                 },
                               ),
                             ),
-                            validator: (value) => InputValidators
-                                .confirmPassword(value, _passwordController.text),
+                            validator: (value) =>
+                                InputValidators.confirmPassword(
+                                  value,
+                                  _passwordController.text,
+                                ),
                           ),
                         ],
                       ),
