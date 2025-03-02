@@ -4,8 +4,8 @@
 // entire codebase. This also helps with localization in the future if we decide
 // to support multiple languages.
 class AppStrings {
-  static const appName = 'Investment Tracker';
-  static const dashboardTitle = 'Investment Dashboard';
+  static const appName = 'EarnPlusPlus';
+  static const dashboardTitle = 'EarnPlusPlus Dashboard';
   static const genericRetry = 'Retry';
   static const emptyInvestments = 'No investments yet';
 }
