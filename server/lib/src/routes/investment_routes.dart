@@ -29,13 +29,14 @@ Future<List<Map<String, dynamic>>> _fetchInvestments(
 
   // Query all investments ordered by date and id
   final results = await conn.query(
-    'SELECT date, asset, amount FROM investments WHERE user_id = ? ORDER BY date ASC, id ASC',
+    'SELECT id, date, asset, amount FROM investments WHERE user_id = ? ORDER BY date ASC, id ASC',
     [userId],
   );
 
   // Transform database rows into a list of maps with formatted data
   return results
       .map((row) => {
+          'id': row['id'] as int,
             // Convert DateTime to ISO8601 string and extract only the date part
             'date':
                 (row['date'] as DateTime).toIso8601String().split('T').first,
@@ -44,6 +45,41 @@ Future<List<Map<String, dynamic>>> _fetchInvestments(
             'amount': (row['amount'] as num).toDouble(),
           })
       .toList();
+}
+
+Future<Map<String, dynamic>> _readJson(Request request) async {
+  final body = await request.readAsString();
+  final decoded = jsonDecode(body);
+  if (decoded is! Map<String, dynamic>) {
+    throw const FormatException('Body must be a JSON object');
+  }
+  return decoded;
+}
+
+DateTime _parseDate(Object? value) {
+  if (value == null) {
+    throw const FormatException('date is required');
+  }
+  return DateTime.parse(value.toString());
+}
+
+String _parseAsset(Object? value) {
+  final asset = (value ?? '').toString().trim();
+  if (asset.isEmpty) {
+    throw const FormatException('asset is required');
+  }
+  return asset;
+}
+
+double _parseAmount(Object? value) {
+  if (value is num) {
+    return value.toDouble();
+  }
+  final parsed = double.tryParse((value ?? '').toString());
+  if (parsed == null || parsed <= 0) {
+    throw const FormatException('amount must be a positive number');
+  }
+  return parsed;
 }
 
 // the _extractUserId function extracts the user ID from the Authorization header
@@ -103,6 +139,103 @@ Router investmentRoutes(MySqlConnection conn, ServerConfig config) {
 
     final list = await _fetchInvestments(conn, config.dbName, userId);
     return _json(200, list);
+  });
+
+  router.post('/investments', (Request req) async {
+    final userId = _extractUserId(req, config.jwtSecret);
+    if (userId == null) {
+      return _json(401, {'message': 'Unauthorized'});
+    }
+
+    try {
+      final payload = await _readJson(req);
+      final date = _parseDate(payload['date']);
+      final asset = _parseAsset(payload['asset']);
+      final amount = _parseAmount(payload['amount']);
+
+      await conn.query('USE ${config.dbName}');
+      await conn.query(
+        'INSERT INTO investments (user_id, date, asset, amount) VALUES (?, ?, ?, ?)',
+        [userId, date, asset, amount],
+      );
+
+      final list = await _fetchInvestments(conn, config.dbName, userId);
+      return _json(201, list.last);
+    } on FormatException catch (e) {
+      return _json(400, {'message': e.message});
+    } catch (e) {
+      return _json(400, {'message': 'Bad request: ${e.toString()}'});
+    }
+  });
+
+  router.put('/investments/<id>', (Request req, String id) async {
+    final userId = _extractUserId(req, config.jwtSecret);
+    if (userId == null) {
+      return _json(401, {'message': 'Unauthorized'});
+    }
+
+    final investmentId = int.tryParse(id);
+    if (investmentId == null) {
+      return _json(400, {'message': 'Invalid investment id'});
+    }
+
+    try {
+      final payload = await _readJson(req);
+      final date = _parseDate(payload['date']);
+      final asset = _parseAsset(payload['asset']);
+      final amount = _parseAmount(payload['amount']);
+
+      await conn.query('USE ${config.dbName}');
+      final result = await conn.query(
+        'UPDATE investments SET date = ?, asset = ?, amount = ? WHERE id = ? AND user_id = ?',
+        [date, asset, amount, investmentId, userId],
+      );
+
+      if (result.affectedRows == 0) {
+        return _json(404, {'message': 'Investment not found'});
+      }
+
+      final rows = await conn.query(
+        'SELECT id, date, asset, amount FROM investments WHERE id = ? AND user_id = ? LIMIT 1',
+        [investmentId, userId],
+      );
+
+      final row = rows.first;
+      return _json(200, {
+        'id': row['id'] as int,
+        'date': (row['date'] as DateTime).toIso8601String().split('T').first,
+        'asset': row['asset'] as String,
+        'amount': (row['amount'] as num).toDouble(),
+      });
+    } on FormatException catch (e) {
+      return _json(400, {'message': e.message});
+    } catch (e) {
+      return _json(400, {'message': 'Bad request: ${e.toString()}'});
+    }
+  });
+
+  router.delete('/investments/<id>', (Request req, String id) async {
+    final userId = _extractUserId(req, config.jwtSecret);
+    if (userId == null) {
+      return _json(401, {'message': 'Unauthorized'});
+    }
+
+    final investmentId = int.tryParse(id);
+    if (investmentId == null) {
+      return _json(400, {'message': 'Invalid investment id'});
+    }
+
+    await conn.query('USE ${config.dbName}');
+    final result = await conn.query(
+      'DELETE FROM investments WHERE id = ? AND user_id = ?',
+      [investmentId, userId],
+    );
+
+    if (result.affectedRows == 0) {
+      return _json(404, {'message': 'Investment not found'});
+    }
+
+    return _json(200, {'message': 'Investment deleted'});
   });
 
   return router;
