@@ -40,6 +40,8 @@ class InvestmentController extends ChangeNotifier {
   // initialized to 'All' to show all investments by default
   String? error; // a nullable string to hold any error messages that may occur
   // during data fetching
+  bool isMutating = false;
+  String? actionError;
 
   InvestmentLoadState get state => _state; // getter for the current load state,
   // which is useful for the UI to determine what to display based on the current
@@ -88,6 +90,7 @@ class InvestmentController extends ChangeNotifier {
   Future<void> load() async {
     _state = InvestmentLoadState.loading;
     error = null;
+    actionError = null;
     notifyListeners(); // notifies listeners that the state has changed to loading,
     // allowing the UI to display a loading indicator while the data is being fetched
 
@@ -107,6 +110,97 @@ class InvestmentController extends ChangeNotifier {
     // allowing the UI to update and display the fetched data, or an error message
     // if the data fetching failed, or to show an empty state if there are no
     // investments to display
+  }
+
+  Future<bool> addInvestment({
+    required DateTime date,
+    required String asset,
+    required String amount,
+  }) async {
+    isMutating = true;
+    actionError = null;
+    notifyListeners();
+
+    try {
+      final created = await _repository.createInvestment(
+        date: date,
+        asset: asset,
+        amount: amount,
+      );
+      _investments = [..._investments, created]
+        ..sort((a, b) => a.date.compareTo(b.date));
+      _state = _investments.isEmpty
+          ? InvestmentLoadState.empty
+          : InvestmentLoadState.success;
+      return true;
+    } on InvestmentUnauthorizedException {
+      _state = InvestmentLoadState.unauthorized;
+      return false;
+    } catch (e) {
+      actionError = 'Failed to add investment: $e';
+      return false;
+    } finally {
+      isMutating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateInvestment({
+    required int id,
+    required DateTime date,
+    required String asset,
+    required String amount,
+  }) async {
+    isMutating = true;
+    actionError = null;
+    notifyListeners();
+
+    try {
+      final updated = await _repository.updateInvestment(
+        id: id,
+        date: date,
+        asset: asset,
+        amount: amount,
+      );
+      _investments = _investments
+          .map((it) => it.id == id ? updated : it)
+          .toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
+      return true;
+    } on InvestmentUnauthorizedException {
+      _state = InvestmentLoadState.unauthorized;
+      return false;
+    } catch (e) {
+      actionError = 'Failed to update investment: $e';
+      return false;
+    } finally {
+      isMutating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> deleteInvestment(int id) async {
+    isMutating = true;
+    actionError = null;
+    notifyListeners();
+
+    try {
+      await _repository.deleteInvestment(id);
+      _investments = _investments.where((it) => it.id != id).toList();
+      _state = _investments.isEmpty
+          ? InvestmentLoadState.empty
+          : InvestmentLoadState.success;
+      return true;
+    } on InvestmentUnauthorizedException {
+      _state = InvestmentLoadState.unauthorized;
+      return false;
+    } catch (e) {
+      actionError = 'Failed to delete investment: $e';
+      return false;
+    } finally {
+      isMutating = false;
+      notifyListeners();
+    }
   }
 
   // the setAsset method updates the selected asset for filtering investments and

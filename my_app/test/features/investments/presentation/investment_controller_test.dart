@@ -5,35 +5,21 @@ import 'package:my_app/features/investments/domain/investment.dart';
 import 'package:my_app/features/investments/presentation/investment_controller.dart';
 import 'package:decimal/decimal.dart';
 
-// A fake implementation of the InvestmentRepository interface that returns
-// predefined data or throws exceptions for testing purposes. This allows us to
-// test the InvestmentController's behavior in different scenarios without relying
-// on actual repository implementations.
 class _FakeRepository extends InvestmentRepository {
-  _FakeRepository(
-    this._result, {
+  _FakeRepository({
+    required List<Investment> result,
+    this.created,
+    this.updated,
     this.throwUnauthorized = false,
-  }); // The _FakeRepository
-  // class has a constructor that takes a list of Investment objects as a result to return
-  // and an optional boolean parameter to indicate whether to throw an unauthorized exception,
-  // allowing for flexible testing of different scenarios in the InvestmentController.
+    this.throwOnMutation = false,
+  }) : _result = result;
 
-  final List<Investment> _result; // a list of Investment objects that will be
-  // returned when fetchInvestments is called on this fake repository, allowing
-  // us to simulate successful data fetching scenarios in our tests
+  final List<Investment> _result;
+  final bool throwUnauthorized;
+  final bool throwOnMutation;
+  final Investment? created;
+  final Investment? updated;
 
-  final bool throwUnauthorized; // a boolean flag that indicates whether the
-  // fetchInvestments method should throw an unauthorized exception, allowing us
-  // to simulate unauthorized access scenarios in our tests and verify that the
-  // InvestmentController handles such cases correctly
-
-  // the fetchInvestments method is overridden to return the predefined result or
-  // throw an unauthorized exception based on the throwUnauthorized flag, allowing
-  // us to test both successful and failed data fetching scenarios in the InvestmentController
-  // if throwUnauthorized is true, it throws an InvestmentUnauthorizedException;
-  // otherwise, it returns the predefined list of investments. This design allows
-  // us to test how the InvestmentController handles both successful data retrieval
-  // and unauthorized access situations.
   @override
   Future<List<Investment>> fetchInvestments() async {
     if (throwUnauthorized) {
@@ -41,64 +27,196 @@ class _FakeRepository extends InvestmentRepository {
     }
     return _result;
   }
+
+  @override
+  Future<Investment> createInvestment({
+    required DateTime date,
+    required String asset,
+    required String amount,
+  }) async {
+    if (throwUnauthorized) {
+      throw const InvestmentUnauthorizedException();
+    }
+    if (throwOnMutation) {
+      throw const InvestmentApiException('mutation failed');
+    }
+    return created ??
+        Investment(
+          id: 99,
+          date: date,
+          asset: asset,
+          amount: Decimal.parse(amount),
+        );
+  }
+
+  @override
+  Future<Investment> updateInvestment({
+    required int id,
+    required DateTime date,
+    required String asset,
+    required String amount,
+  }) async {
+    if (throwUnauthorized) {
+      throw const InvestmentUnauthorizedException();
+    }
+    if (throwOnMutation) {
+      throw const InvestmentApiException('mutation failed');
+    }
+    return updated ??
+        Investment(
+          id: id,
+          date: date,
+          asset: asset,
+          amount: Decimal.parse(amount),
+        );
+  }
+
+  @override
+  Future<void> deleteInvestment(int id) async {
+    if (throwUnauthorized) {
+      throw const InvestmentUnauthorizedException();
+    }
+    if (throwOnMutation) {
+      throw const InvestmentApiException('mutation failed');
+    }
+  }
 }
 
 void main() {
   test('load success updates state and totals', () async {
-    // the test case for loading investments successfully creates an instance of
-    // the InvestmentController with a _FakeRepository that returns a predefined
-    // list of investments. It then calls the load method on the controller and
-    // verifies that the state is updated to success, the number of investments
-    // is correct, and the total invested amount is calculated accurately, ensuring
-    // that the InvestmentController behaves as expected when data is fetched
-    // successfully from the repository.
     final controller = InvestmentController(
-      repository: _FakeRepository([
-        Investment(
-          date: DateTime(2025, 2, 1),
-          asset: 'AAPL',
-          amount: Decimal.parse('10.25'),
-        ),
-        Investment(
-          date: DateTime(2025, 2, 2),
-          asset: 'AAPL',
-          amount: Decimal.parse('5.75'),
-        ),
-      ]),
+      repository: _FakeRepository(
+        result: [
+          Investment(
+            id: 1,
+            date: DateTime(2025, 2, 1),
+            asset: 'AAPL',
+            amount: Decimal.parse('10.25'),
+          ),
+          Investment(
+            id: 2,
+            date: DateTime(2025, 2, 2),
+            asset: 'AAPL',
+            amount: Decimal.parse('5.75'),
+          ),
+        ],
+      ),
     );
 
-    await controller.load(); // calls the load method on the controller to fetch
-    // investments from the fake repository
+    await controller.load();
 
-    expect(controller.state, InvestmentLoadState.success); // verifies that the
-    // state of the controller is updated to success after loading the investments
-    expect(
-      controller.investments.length,
-      2,
-    ); // checks that the number of investments
-    // loaded is correct
-    expect(
-      controller.totalInvested,
-      Decimal.parse('16.00'),
-    ); // verifies that the
-    // total invested amount is calculated correctly as the sum of the amounts of
-    // the loaded investments
+    expect(controller.state, InvestmentLoadState.success);
+    expect(controller.investments.length, 2);
+    expect(controller.totalInvested, Decimal.parse('16.00'));
   });
 
   test('load unauthorized updates state', () async {
-    // the test case for unauthorized loading creates an instance of the
-    // InvestmentController with a _FakeRepository that is configured to throw an
-    // InvestmentUnauthorizedException when fetchInvestments is called. It then calls
-    // the load method on the controller and verifies that the state is updated to
-    // unauthorized, ensuring that the InvestmentController correctly handles
-    // unauthorized access scenarios and updates its state accordingly when the
-    // repository throws an unauthorized exception.
     final controller = InvestmentController(
-      repository: _FakeRepository(const [], throwUnauthorized: true),
+      repository: _FakeRepository(result: const [], throwUnauthorized: true),
     );
 
     await controller.load();
 
     expect(controller.state, InvestmentLoadState.unauthorized);
+  });
+
+  test('addInvestment appends record on success', () async {
+    final controller = InvestmentController(
+      repository: _FakeRepository(
+        result: [
+          Investment(
+            id: 2,
+            date: DateTime(2025, 2, 1),
+            asset: 'AAPL',
+            amount: Decimal.parse('10.00'),
+          ),
+        ],
+        created: Investment(
+          id: 1,
+          date: DateTime(2025, 2, 3),
+          asset: 'MSFT',
+          amount: Decimal.parse('20.00'),
+        ),
+      ),
+    );
+
+    await controller.load();
+    final ok = await controller.addInvestment(
+      date: DateTime(2025, 2, 3),
+      asset: 'MSFT',
+      amount: '20.00',
+    );
+
+    expect(ok, isTrue);
+    expect(controller.investments.length, 2);
+    expect(controller.state, InvestmentLoadState.success);
+  });
+
+  test('updateInvestment replaces matching item on success', () async {
+    final original = Investment(
+      id: 7,
+      date: DateTime(2025, 2, 1),
+      asset: 'AAPL',
+      amount: Decimal.parse('10.00'),
+    );
+    final updated = Investment(
+      id: 7,
+      date: DateTime(2025, 2, 1),
+      asset: 'AAPL',
+      amount: Decimal.parse('11.00'),
+    );
+
+    final controller = InvestmentController(
+      repository: _FakeRepository(result: [original], updated: updated),
+    );
+
+    await controller.load();
+    final ok = await controller.updateInvestment(
+      id: 7,
+      date: DateTime(2025, 2, 1),
+      asset: 'AAPL',
+      amount: '11.00',
+    );
+
+    expect(ok, isTrue);
+    expect(controller.investments.first.amount, Decimal.parse('11.00'));
+  });
+
+  test('deleteInvestment removes matching item on success', () async {
+    final controller = InvestmentController(
+      repository: _FakeRepository(
+        result: [
+          Investment(
+            id: 4,
+            date: DateTime(2025, 2, 1),
+            asset: 'AAPL',
+            amount: Decimal.parse('10.00'),
+          ),
+        ],
+      ),
+    );
+
+    await controller.load();
+    final ok = await controller.deleteInvestment(4);
+
+    expect(ok, isTrue);
+    expect(controller.investments, isEmpty);
+    expect(controller.state, InvestmentLoadState.empty);
+  });
+
+  test('mutation error sets actionError', () async {
+    final controller = InvestmentController(
+      repository: _FakeRepository(result: const [], throwOnMutation: true),
+    );
+
+    await controller.load();
+    final ok = await controller.addInvestment(
+      date: DateTime(2025, 2, 1),
+      asset: 'AAPL',
+      amount: '10.00',
+    );
+
+    expect(ok, isFalse);
+    expect(controller.actionError, contains('Failed to add investment'));
   });
 }

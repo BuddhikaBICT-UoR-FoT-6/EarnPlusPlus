@@ -64,6 +64,104 @@ class InvestmentRepository {
         .map((e) => Investment.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  Future<Investment> createInvestment({
+    required DateTime date,
+    required String asset,
+    required String amount,
+  }) async {
+    final token = await _authService.getValidToken();
+    if (token == null || token.isEmpty) {
+      throw const InvestmentUnauthorizedException();
+    }
+
+    final resp = await http
+        .post(
+          Uri.parse('${AppConfig.baseUrl}/investments'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'date': date.toIso8601String().split('T').first,
+            'asset': asset,
+            'amount': amount,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (resp.statusCode == 401) {
+      await _authService.logout();
+      throw const InvestmentUnauthorizedException();
+    }
+
+    if (resp.statusCode != 201) {
+      throw InvestmentApiException('Server returned ${resp.statusCode}');
+    }
+
+    return Investment.fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
+  }
+
+  Future<Investment> updateInvestment({
+    required int id,
+    required DateTime date,
+    required String asset,
+    required String amount,
+  }) async {
+    final token = await _authService.getValidToken();
+    if (token == null || token.isEmpty) {
+      throw const InvestmentUnauthorizedException();
+    }
+
+    final resp = await http
+        .put(
+          Uri.parse('${AppConfig.baseUrl}/investments/$id'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'date': date.toIso8601String().split('T').first,
+            'asset': asset,
+            'amount': amount,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (resp.statusCode == 401) {
+      await _authService.logout();
+      throw const InvestmentUnauthorizedException();
+    }
+
+    if (resp.statusCode != 200) {
+      throw InvestmentApiException('Server returned ${resp.statusCode}');
+    }
+
+    return Investment.fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
+  }
+
+  Future<void> deleteInvestment(int id) async {
+    final token = await _authService.getValidToken();
+    if (token == null || token.isEmpty) {
+      throw const InvestmentUnauthorizedException();
+    }
+
+    final resp = await http
+        .delete(
+          Uri.parse('${AppConfig.baseUrl}/investments/$id'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (resp.statusCode == 401) {
+      await _authService.logout();
+      throw const InvestmentUnauthorizedException();
+    }
+
+    if (resp.statusCode != 200) {
+      throw InvestmentApiException('Server returned ${resp.statusCode}');
+    }
+  }
 }
 
 // The following three classes represent custom exceptions that can be thrown

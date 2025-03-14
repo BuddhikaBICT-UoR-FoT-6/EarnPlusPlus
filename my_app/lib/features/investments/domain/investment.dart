@@ -6,11 +6,13 @@ import 'package:decimal/decimal.dart'; // for handling decimal values
 // The amount is stored as a Decimal to maintain precision for financial calculations,
 // and the date is parsed from an ISO8601 string format.
 class Investment {
+  final int? id;
   final DateTime date;
   final String asset;
   final Decimal amount;
 
   const Investment({
+    this.id,
     required this.date,
     required this.asset,
     required this.amount,
@@ -23,9 +25,16 @@ class Investment {
     // the backend sends it (as a string or a number), and then parse it into a
     // Decimal for precision.
     return Investment(
+      id: (json['id'] as num?)?.toInt(),
       date: DateTime.parse(json['date'] as String),
       asset: json['asset'] as String,
       amount: Decimal.parse(rawAmount.toString()),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'date': date.toIso8601String().split('T').first,
+        'asset': asset,
+        'amount': amount.toString(),
+      };
 }
