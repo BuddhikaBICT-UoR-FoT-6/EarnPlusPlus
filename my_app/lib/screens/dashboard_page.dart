@@ -11,7 +11,10 @@ import '../core/utils/decimal_format.dart';
 import '../features/investments/domain/investment.dart';
 import '../features/investments/presentation/investment_controller.dart';
 import '../services/auth_service.dart';
+import 'admin_dashboard_page.dart';
+import 'investment_management_page.dart';
 import 'login_page.dart';
+import 'superadmin_dashboard_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({
@@ -104,6 +107,40 @@ class _DashboardView extends StatelessWidget {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Settings coming soon')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.account_balance_wallet_outlined),
+              title: const Text('Manage Investments'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const InvestmentManagementPage(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.admin_panel_settings_outlined),
+              title: const Text('Admin Dashboard'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.manage_accounts_outlined),
+              title: const Text('Superadmin Dashboard'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const SuperAdminDashboardPage(),
+                  ),
                 );
               },
             ),
