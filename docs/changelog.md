@@ -2,45 +2,27 @@
 
 All notable project changes are documented in this file.
 
-## [1.5.0] - 2025-03-14 (Planned)
+## [1.5.0] - 2025-03-18
 ### Added
-- Superadmin dashboard milestone defined for:
-- System-wide oversight.
-- Role governance and permission control.
-- Platform-level reporting and audit visibility.
+- Superadmin dashboard with role distribution metrics.
+- Superadmin role management endpoint and UI role update action.
 
-### Notes
-- This milestone is documented as the next target after admin dashboard completion.
-
-## [1.4.0] - 2025-03-12 (Planned)
+## [1.4.0] - 2025-03-16
 ### Added
-- Admin dashboard milestone defined for:
-- User oversight and management workflows.
-- Investment moderation and review tooling.
-- Operational summaries for portfolio activity.
+- Admin dashboard summary endpoint and UI cards.
+- User listing endpoint for admin/superadmin operators.
 
-### Notes
-- This milestone is documented as the operational management layer before superadmin controls.
-
-## [1.3.0] - 2025-03-10 (Planned)
+## [1.3.0] - 2025-03-15
 ### Added
-- User management milestone defined for:
-- User profile and account lifecycle handling.
-- Role assignment model preparation.
-- User-focused account administration workflows.
+- User role field added to schema and JWT claims.
+- First-user bootstrap as superadmin.
+- `GET /users/me` profile endpoint.
 
-### Notes
-- This milestone is documented as the role and account management foundation.
-
-## [1.2.0] - 2025-03-08 (Planned)
+## [1.2.0] - 2025-03-14
 ### Added
-- Investment details management milestone defined for:
-- Detailed investment-level view and handling.
-- Data model expansion path for richer portfolio records.
-- Workflow planning for investment create/update/delete operations.
-
-### Notes
-- This milestone is documented as the next product depth layer after MVP stabilization.
+- Investment CRUD endpoints (`POST/PUT/DELETE /investments`).
+- Investment management UI for add/edit/delete flows.
+- Investment model/repository/controller extensions for mutation handling.
 
 ## [1.1.0] - 2025-03-05
 ### Added
