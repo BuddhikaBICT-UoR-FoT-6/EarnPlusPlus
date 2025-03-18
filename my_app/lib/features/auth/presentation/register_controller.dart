@@ -16,6 +16,8 @@ class RegisterController extends ChangeNotifier {
 
   bool isSubmitting = false;
   String? error;
+  bool awaitingOtp = false;
+  String? pendingEmail;
 
   Future<bool> register({
     // the register method takes an email and password, sets the submitting state
@@ -33,10 +35,37 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.register(email: email, password: password);
+      await _authService.startRegisterOtp(email: email, password: password);
+      awaitingOtp = true;
+      pendingEmail = email;
       return true;
     } catch (e) {
       error = 'Register failed: $e';
+      return false;
+    } finally {
+      isSubmitting = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> verifyOtp({required String otp}) async {
+    if (pendingEmail == null || pendingEmail!.isEmpty) {
+      error = 'Missing pending email. Restart registration.';
+      notifyListeners();
+      return false;
+    }
+
+    isSubmitting = true;
+    error = null;
+    notifyListeners();
+
+    try {
+      await _authService.verifyRegisterOtp(email: pendingEmail!, otp: otp);
+      awaitingOtp = false;
+      pendingEmail = null;
+      return true;
+    } catch (e) {
+      error = 'OTP verification failed: $e';
       return false;
     } finally {
       isSubmitting = false;

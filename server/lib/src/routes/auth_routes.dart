@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:bcrypt/bcrypt.dart';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 import 'package:mysql1/mysql1.dart';
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
@@ -110,6 +113,45 @@ int? _userIdFromClaims(Map<String, dynamic> claims) {
   return null;
 }
 
+String _generateOtp({int length = 6}) {
+  final r = Random.secure();
+  final min = pow(10, length - 1).toInt();
+  final max = pow(10, length).toInt() - 1;
+  return (min + r.nextInt(max - min)).toString();
+}
+
+Future<void> _sendEmail(
+  ServerConfig config, {
+  required String to,
+  required String subject,
+  required String text,
+}) async {
+  // If SMTP is not configured, fall back to console output for development.
+  if (config.smtpHost.isEmpty ||
+      config.smtpUser.isEmpty ||
+      config.smtpPassword.isEmpty ||
+      config.smtpFrom.isEmpty) {
+    print('[EMAIL-DEV] to=$to subject=$subject body=$text');
+    return;
+  }
+
+  final smtp = SmtpServer(
+    config.smtpHost,
+    port: config.smtpPort,
+    username: config.smtpUser,
+    password: config.smtpPassword,
+    allowInsecure: false,
+  );
+
+  final message = Message()
+    ..from = Address(config.smtpFrom, 'EarnPlusPlus')
+    ..recipients.add(to)
+    ..subject = subject
+    ..text = text;
+
+  await send(message, smtp);
+}
+
 // The authRoutes function defines authentication endpoints for user registration,
 // login, token refresh, and logout operations. It implements a two-token system
 // with short-lived access tokens for API requests and longer-lived refresh tokens
@@ -119,13 +161,8 @@ int? _userIdFromClaims(Map<String, dynamic> claims) {
 Router authRoutes(MySqlConnection conn, ServerConfig config) {
   final router = Router();
 
-  // the POST /auth/register endpoint creates a new user account with the provided
-  // email and password. It validates input (email format, password length), checks
-  // for duplicate emails, and automatically assigns the first user to the superadmin
-  // role to enable initial system administration. Subsequent users are assigned the
-  // regular user role. Passwords are hashed using bcrypt before storage, ensuring
-  // that plaintext passwords are never persisted to the database.
-  router.post('/auth/register', (Request req) async {
+  // Step 1: request OTP for registration.
+  router.post('/auth/register/send-otp', (Request req) async {
     try {
       final data = await _readJson(req);
       final email = (data['email'] ?? '').toString().trim().toLowerCase();
@@ -151,17 +188,93 @@ Router authRoutes(MySqlConnection conn, ServerConfig config) {
         return _json(400, {'message': 'Email already registered'});
       }
 
+      final hash = BCrypt.hashpw(password, BCrypt.gensalt());
+      final otp = _generateOtp();
+      final expiresAt = DateTime.now().add(const Duration(minutes: 10));
+
+      await conn
+          .query('DELETE FROM registration_otps WHERE email = ?', [email]);
+      await conn.query(
+        'INSERT INTO registration_otps (email, password_hash, otp_code, expires_at) VALUES (?, ?, ?, ?)',
+        [email, hash, otp, expiresAt],
+      );
+
+      await _sendEmail(
+        config,
+        to: email,
+        subject: 'Your EarnPlusPlus registration OTP',
+        text:
+            'Your OTP is: $otp. It expires in 10 minutes. If you did not request this, ignore this email.',
+      );
+
+      return _json(202, {
+        'message': 'OTP sent to email. Please verify to complete registration.',
+      });
+    } catch (e) {
+      return _json(400, {'message': 'Bad request: ${e.toString()}'});
+    }
+  });
+
+  // Step 2: verify OTP and create the account.
+  router.post('/auth/register/verify', (Request req) async {
+    try {
+      final data = await _readJson(req);
+      final email = (data['email'] ?? '').toString().trim().toLowerCase();
+      final otp = (data['otp'] ?? '').toString().trim();
+
+      if (email.isEmpty || !email.contains('@')) {
+        return _json(400, {'message': 'Invalid email'});
+      }
+      if (otp.length < 4) {
+        return _json(400, {'message': 'Invalid OTP'});
+      }
+
+      await conn.query('USE ${config.dbName}');
+
+      final otpRows = await conn.query(
+        'SELECT password_hash, otp_code, expires_at FROM registration_otps WHERE email = ? LIMIT 1',
+        [email],
+      );
+      if (otpRows.isEmpty) {
+        return _json(
+            400, {'message': 'OTP not found. Please request a new one.'});
+      }
+
+      final row = otpRows.first;
+      final storedOtp = (row['otp_code'] ?? '').toString();
+      final expiresAt = row['expires_at'] as DateTime;
+      if (DateTime.now().isAfter(expiresAt)) {
+        await conn
+            .query('DELETE FROM registration_otps WHERE email = ?', [email]);
+        return _json(
+            400, {'message': 'OTP expired. Please request a new one.'});
+      }
+      if (storedOtp != otp) {
+        return _json(400, {'message': 'Incorrect OTP'});
+      }
+
+      final existing = await conn.query(
+        'SELECT id FROM users WHERE email = ? LIMIT 1',
+        [email],
+      );
+      if (existing.isNotEmpty) {
+        await conn
+            .query('DELETE FROM registration_otps WHERE email = ?', [email]);
+        return _json(400, {'message': 'Email already registered'});
+      }
+
       final userCountRows =
           await conn.query('SELECT COUNT(*) AS total FROM users');
       final totalUsers = (userCountRows.first['total'] as num).toInt();
       final role = totalUsers == 0 ? 'superadmin' : 'user';
 
-      final hash = BCrypt.hashpw(password, BCrypt.gensalt());
-
+      final hash = (row['password_hash'] ?? '').toString();
       await conn.query(
         'INSERT INTO users (email, role, password_hash) VALUES (?, ?, ?)',
         [email, role, hash],
       );
+      await conn
+          .query('DELETE FROM registration_otps WHERE email = ?', [email]);
 
       return _json(201, {
         'message': 'User registered successfully',
@@ -170,6 +283,17 @@ Router authRoutes(MySqlConnection conn, ServerConfig config) {
     } catch (e) {
       return _json(400, {'message': 'Bad request: ${e.toString()}'});
     }
+  });
+
+  // Backward compatibility alias: old register route now triggers OTP send.
+  router.post('/auth/register', (Request req) async {
+    return await router.call(Request(
+      req.method,
+      req.requestedUri.replace(path: '/auth/register/send-otp'),
+      headers: req.headers,
+      body: await req.readAsString(),
+      context: req.context,
+    ));
   });
 
   // the POST /auth/login endpoint verifies the user's email and password credentials
@@ -217,6 +341,19 @@ Router authRoutes(MySqlConnection conn, ServerConfig config) {
         role: role,
         tokenVersion: tokenVersion,
       );
+
+      // Non-blocking login alert email.
+      try {
+        await _sendEmail(
+          config,
+          to: email,
+          subject: 'New login to your EarnPlusPlus account',
+          text:
+              'A new login was detected for your account at ${DateTime.now().toIso8601String()}. If this was not you, reset your password immediately.',
+        );
+      } catch (_) {
+        // Do not block login if email delivery fails.
+      }
 
       return _json(200, {
         'token': token,

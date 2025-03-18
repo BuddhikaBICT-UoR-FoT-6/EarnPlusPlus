@@ -33,6 +33,17 @@ Future<void> ensureSchema(MySqlConnection conn,
     )
   ''');
 
+  await conn.query('''
+    CREATE TABLE IF NOT EXISTS registration_otps (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      email VARCHAR(120) NOT NULL UNIQUE,
+      password_hash VARCHAR(100) NOT NULL,
+      otp_code VARCHAR(8) NOT NULL,
+      expires_at DATETIME NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  ''');
+
   // Backward-compatible migration for existing DBs created before user_id existed.
   await conn.query('''
     ALTER TABLE investments

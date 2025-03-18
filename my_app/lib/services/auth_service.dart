@@ -20,9 +20,17 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    // send req to server registration endpoint
+    // Legacy method kept for compatibility: starts OTP-based registration.
+    await startRegisterOtp(email: email, password: password);
+  }
+
+  // Starts registration by requesting OTP to be sent to email.
+  Future<void> startRegisterOtp({
+    required String email,
+    required String password,
+  }) async {
     final resp = await http.post(
-      Uri.parse('${AppConfig.baseUrl}/auth/register'),
+      Uri.parse('${AppConfig.baseUrl}/auth/register/send-otp'),
       headers: const {
         'Content-Type': 'application/json',
       }, // tell server the data being sent is in json format
@@ -32,7 +40,22 @@ class AuthService {
       }), // converts the Map of user credentials into a raw json string
     );
 
-    // pulls the error reason from the server's response to show to the user
+    if (resp.statusCode != 202) {
+      throw Exception(_extractMessage(resp.body));
+    }
+  }
+
+  // Completes registration after user enters OTP sent to their email.
+  Future<void> verifyRegisterOtp({
+    required String email,
+    required String otp,
+  }) async {
+    final resp = await http.post(
+      Uri.parse('${AppConfig.baseUrl}/auth/register/verify'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'otp': otp}),
+    );
+
     if (resp.statusCode != 201) {
       throw Exception(_extractMessage(resp.body));
     }

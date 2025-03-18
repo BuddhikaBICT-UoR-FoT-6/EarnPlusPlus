@@ -59,6 +59,7 @@ class _RegisterViewState extends State<_RegisterView> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
+  final _otpController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -71,6 +72,7 @@ class _RegisterViewState extends State<_RegisterView> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
+    _otpController.dispose();
     super
         .dispose(); // calls the parent class's dispose method to ensure that any
     // additional cleanup in the widget lifecycle is also performed correctly.
@@ -99,10 +101,15 @@ class _RegisterViewState extends State<_RegisterView> {
     // attempt is stored in the 'ok' variable, which is then used to determine
     // whether to show a success message or handle any errors that may have occurred
     // during the registration process.
-    final ok = await controller.register(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
+    bool ok;
+    if (controller.awaitingOtp) {
+      ok = await controller.verifyOtp(otp: _otpController.text.trim());
+    } else {
+      ok = await controller.register(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+    }
 
     if (!mounted) return; // checks if the widget is still mounted in the widget
     // tree before attempting to show a SnackBar or navigate, ensuring that we
@@ -116,10 +123,22 @@ class _RegisterViewState extends State<_RegisterView> {
     // successfully creating an account. This provides feedback to the user that
     // their registration was successful.
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration successful. Please login.')),
-      );
-      Navigator.of(context).pop();
+      if (controller.awaitingOtp) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'OTP sent to your email. Enter it to complete registration.',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration successful. Please login.'),
+          ),
+        );
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -169,7 +188,9 @@ class _RegisterViewState extends State<_RegisterView> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Create your account to start tracking your portfolio.',
+                      controller.awaitingOtp
+                          ? 'Enter the OTP sent to your email to complete registration.'
+                          : 'Create your account to start tracking your portfolio.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 18),
@@ -197,6 +218,7 @@ class _RegisterViewState extends State<_RegisterView> {
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
+                            enabled: !controller.awaitingOtp,
                             decoration: const InputDecoration(
                               labelText: 'Email',
                               prefixIcon: Icon(Icons.alternate_email),
@@ -208,6 +230,7 @@ class _RegisterViewState extends State<_RegisterView> {
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             textInputAction: TextInputAction.next,
+                            enabled: !controller.awaitingOtp,
                             decoration: InputDecoration(
                               labelText: 'Password',
                               prefixIcon: const Icon(Icons.lock_outline),
@@ -231,6 +254,7 @@ class _RegisterViewState extends State<_RegisterView> {
                             controller: _confirmController,
                             obscureText: _obscureConfirmPassword,
                             textInputAction: TextInputAction.done,
+                            enabled: !controller.awaitingOtp,
                             onFieldSubmitted: (_) =>
                                 controller.isSubmitting ? null : _submit(),
                             decoration: InputDecoration(
@@ -258,6 +282,30 @@ class _RegisterViewState extends State<_RegisterView> {
                                   _passwordController.text,
                                 ),
                           ),
+                          if (controller.awaitingOtp) ...[
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _otpController,
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) =>
+                                  controller.isSubmitting ? null : _submit(),
+                              decoration: const InputDecoration(
+                                labelText: 'OTP',
+                                prefixIcon: Icon(Icons.verified_user_outlined),
+                                helperText:
+                                    'Enter the 6-digit code from your email',
+                              ),
+                              validator: (value) {
+                                if (!controller.awaitingOtp) return null;
+                                final v = (value ?? '').trim();
+                                if (v.length < 4) {
+                                  return 'Enter a valid OTP';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -282,7 +330,11 @@ class _RegisterViewState extends State<_RegisterView> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Create account'),
+                            : Text(
+                                controller.awaitingOtp
+                                    ? 'Verify OTP'
+                                    : 'Create account',
+                              ),
                       ),
                     ),
                   ],

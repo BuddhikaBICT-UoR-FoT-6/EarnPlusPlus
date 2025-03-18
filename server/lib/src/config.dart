@@ -13,6 +13,13 @@ class ServerConfig {
   // JWT authentication secret
   final String jwtSecret;
 
+  // Optional SMTP settings used for OTP and login notification emails.
+  final String smtpHost;
+  final int smtpPort;
+  final String smtpUser;
+  final String smtpPassword;
+  final String smtpFrom;
+
   // Constructor requiring all configuration parameters
   ServerConfig({
     required this.host,
@@ -23,6 +30,11 @@ class ServerConfig {
     required this.dbPassword,
     required this.dbName,
     required this.jwtSecret,
+    required this.smtpHost,
+    required this.smtpPort,
+    required this.smtpUser,
+    required this.smtpPassword,
+    required this.smtpFrom,
   });
 
   // Factory constructor that loads configuration from environment variables with fallback defaults
@@ -41,6 +53,11 @@ class ServerConfig {
       dbName: env['DB_NAME'] ?? 'investments_db',
       jwtSecret:
           env['JWT_SECRET'] ?? 'CHANGE_THIS_SECRET_TO_SOMETHING_LONG_RANDOM',
+      smtpHost: env['SMTP_HOST'] ?? '',
+      smtpPort: parseInt('SMTP_PORT', 587),
+      smtpUser: env['SMTP_USER'] ?? '',
+      smtpPassword: env['SMTP_PASSWORD'] ?? '',
+      smtpFrom: env['SMTP_FROM'] ?? (env['SMTP_USER'] ?? ''),
     );
   }
 
