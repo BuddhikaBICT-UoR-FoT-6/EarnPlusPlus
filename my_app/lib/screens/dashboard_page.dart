@@ -92,84 +92,97 @@ class _DashboardView extends StatelessWidget {
         // triggers the logout process and navigates the user back to the LoginPage. This
         // provides a convenient way for users to navigate between different sections of the
         // application and manage their session.
-        child: ListView(
-          children: [
-            const DrawerHeader(child: Text('Menu')),
-            ListTile(
-              leading: const Icon(Icons.dashboard),
-              title: const Text('Dashboard'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Settings coming soon')),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.account_balance_wallet_outlined),
-              title: const Text('Manage Investments'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const InvestmentManagementPage(),
+        child: FutureBuilder<String>(
+          future: AuthService().getCurrentRole(),
+          builder: (context, snapshot) {
+            final role = snapshot.data ?? 'user';
+            final canOpenAdmin = role == 'admin' || role == 'superadmin';
+            final canOpenSuperAdmin = role == 'superadmin';
+
+            return ListView(
+              children: [
+                const DrawerHeader(child: Text('Menu')),
+                ListTile(
+                  leading: const Icon(Icons.dashboard),
+                  title: const Text('Dashboard'),
+                  onTap: () => Navigator.pop(context),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.settings),
+                  title: const Text('Settings'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Settings coming soon')),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.account_balance_wallet_outlined),
+                  title: const Text('Manage Investments'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const InvestmentManagementPage(),
+                      ),
+                    );
+                  },
+                ),
+                if (canOpenAdmin)
+                  ListTile(
+                    leading: const Icon(Icons.admin_panel_settings_outlined),
+                    title: const Text('Admin Dashboard'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AdminDashboardPage(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.admin_panel_settings_outlined),
-              title: const Text('Admin Dashboard'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.manage_accounts_outlined),
-              title: const Text('Superadmin Dashboard'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const SuperAdminDashboardPage(),
+                if (canOpenSuperAdmin)
+                  ListTile(
+                    leading: const Icon(Icons.manage_accounts_outlined),
+                    title: const Text('Superadmin Dashboard'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const SuperAdminDashboardPage(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('About'),
-              onTap: () {
-                Navigator.pop(context);
-                showAboutDialog(
-                  context: context,
-                  applicationName: AppStrings.appName,
-                  applicationVersion: '0.1.0',
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Logout'),
-              onTap: () async {
-                Navigator.pop(context);
-                await AuthService().logout();
-                if (!context.mounted) return;
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (route) => false,
-                );
-              },
-            ),
-          ],
+                ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: const Text('About'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showAboutDialog(
+                      context: context,
+                      applicationName: AppStrings.appName,
+                      applicationVersion: '0.1.0',
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.logout),
+                  title: const Text('Logout'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await AuthService().logout();
+                    if (!context.mounted) return;
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                      (route) => false,
+                    );
+                  },
+                ),
+              ],
+            );
+          },
         ),
       ),
       body: Padding(

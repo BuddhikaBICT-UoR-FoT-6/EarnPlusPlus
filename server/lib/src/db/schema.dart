@@ -17,6 +17,7 @@ Future<void> ensureSchema(MySqlConnection conn,
       id INT AUTO_INCREMENT PRIMARY KEY,
       email VARCHAR(120) NOT NULL UNIQUE,
       role VARCHAR(24) NOT NULL DEFAULT 'user',
+      token_version INT NOT NULL DEFAULT 0,
       password_hash VARCHAR(100) NOT NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
@@ -41,5 +42,10 @@ Future<void> ensureSchema(MySqlConnection conn,
   await conn.query('''
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS role VARCHAR(24) NOT NULL DEFAULT 'user'
+  ''');
+
+  await conn.query('''
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS token_version INT NOT NULL DEFAULT 0
   ''');
 }

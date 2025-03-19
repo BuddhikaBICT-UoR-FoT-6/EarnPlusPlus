@@ -108,6 +108,10 @@ int? _extractUserId(Request req, String jwtSecret) {
     // or a string that can be parsed as an integer, and returns the user ID as
     // an integer if valid, or null if the "sub" field is missing or invalid.
     if (payload is Map<String, dynamic>) {
+      final tokenType = (payload['typ'] ?? 'access').toString();
+      if (tokenType != 'access') {
+        return null;
+      }
       final sub = payload['sub'];
       if (sub is int) {
         return sub;

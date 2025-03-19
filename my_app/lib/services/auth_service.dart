@@ -6,6 +6,7 @@ import '../config/app_config.dart';
 class AuthService {
   static const String _tokenKey =
       'auth_token'; // identify the token when saving it to the phone's storage
+  static const String _refreshTokenKey = 'refresh_token';
   static const FlutterSecureStorage _secureStorage =
       FlutterSecureStorage(); // instance of
   // FlutterSecureStorage to handle secure storage operations such as saving,
@@ -53,12 +54,18 @@ class AuthService {
     final data = jsonDecode(resp.body) as Map<String, dynamic>;
     final token = (data['token'] ?? '')
         .toString(); // looks for the key token in the server's response
+    final refreshToken = (data['refresh_token'] ?? '').toString();
 
     if (token.isEmpty) {
       throw Exception('Missing token in server response');
     }
 
+    if (refreshToken.isEmpty) {
+      throw Exception('Missing refresh token in server response');
+    }
+
     await _secureStorage.write(key: _tokenKey, value: token); // saves the token
+    await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
     // to the phone's secure storage with the key _tokenKey for later retrieval
     // when making authenticated requests to the backend, allowing the app to maintain
     // the user's login state across sessions and app restarts without requiring
@@ -84,17 +91,51 @@ class AuthService {
       return null;
     }
 
-    if (_isExpired(token)) {
+    if (!_isExpired(token)) {
+      return token;
+    }
+
+    final refreshedToken = await _refreshAccessToken();
+    if (refreshedToken == null || _isExpired(refreshedToken)) {
       await logout();
       return null;
     }
 
-    return token;
+    return refreshedToken;
+  }
+
+  Future<String> getCurrentRole() async {
+    final token = await getValidToken();
+    if (token == null) {
+      return 'user';
+    }
+
+    final payload = _decodePayload(token);
+    final role = (payload?['role'] ?? 'user').toString();
+    if (role == 'admin' || role == 'superadmin') {
+      return role;
+    }
+    return 'user';
   }
 
   // deletes the token from the phone
   Future<void> logout() async {
     await _secureStorage.delete(key: _tokenKey);
+    await _secureStorage.delete(key: _refreshTokenKey);
+  }
+
+  Future<void> logoutAllSessions() async {
+    final token = await getValidToken();
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    await http.post(
+      Uri.parse('${AppConfig.baseUrl}/auth/logout-all'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    await logout();
   }
 
   String _extractMessage(String responseBody) {
@@ -120,25 +161,10 @@ class AuthService {
   // true, indicating that the token is expired; otherwise, it returns false.
   bool _isExpired(String token) {
     try {
-      // JWT tokens consist of three parts separated by dots: header, payload,
-      // and signature. The payload is the second part, which contains the claims
-      // including the "exp" claim that indicates the token's expiration time.
-      final parts = token.split('.');
-      if (parts.length != 3) {
+      final payload = _decodePayload(token);
+      if (payload == null) {
         return true;
       }
-
-      // The code splits the token into its parts, decodes the payload from
-      // Base64Url, and then parses the JSON to extract the expiration time.
-      final payloadBytes = base64Url.decode(base64Url.normalize(parts[1]));
-
-      final payload =
-          jsonDecode(utf8.decode(payloadBytes))
-              as Map<String, dynamic>; // decodes
-      // the payload part of the JWT token from Base64Url and parses it as
-      // JSON to access the claims contained within the token, such as the
-      // "exp" claim for expiration time and other relevant information about
-      // the user's authentication state and permissions encoded in the token's payload.
 
       final exp = payload['exp']; // the "exp" claim represents the expiration
       // time of the token in seconds since the epoch (Unix time). The code checks
@@ -153,6 +179,58 @@ class AuthService {
       return DateTime.now().millisecondsSinceEpoch >= expiryMs;
     } catch (_) {
       return true;
+    }
+  }
+
+  Map<String, dynamic>? _decodePayload(String token) {
+    final parts = token.split('.');
+    if (parts.length != 3) {
+      return null;
+    }
+
+    final payloadBytes = base64Url.decode(base64Url.normalize(parts[1]));
+    final decoded = jsonDecode(utf8.decode(payloadBytes));
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+    return null;
+  }
+
+  Future<String?> _getRefreshToken() async {
+    final token = await _secureStorage.read(key: _refreshTokenKey);
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+    return token;
+  }
+
+  Future<String?> _refreshAccessToken() async {
+    final refreshToken = await _getRefreshToken();
+    if (refreshToken == null) {
+      return null;
+    }
+
+    try {
+      final resp = await http.post(
+        Uri.parse('${AppConfig.baseUrl}/auth/refresh'),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({'refresh_token': refreshToken}),
+      );
+
+      if (resp.statusCode != 200) {
+        return null;
+      }
+
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      final token = (data['token'] ?? '').toString();
+      if (token.isEmpty) {
+        return null;
+      }
+
+      await _secureStorage.write(key: _tokenKey, value: token);
+      return token;
+    } catch (_) {
+      return null;
     }
   }
 }

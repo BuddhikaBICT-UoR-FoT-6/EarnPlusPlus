@@ -28,6 +28,10 @@ Map<String, dynamic>? _claims(Request req, String jwtSecret) {
     final verified = JWT.verify(token, SecretKey(jwtSecret));
     final payload = verified.payload;
     if (payload is Map<String, dynamic>) {
+      final tokenType = (payload['typ'] ?? 'access').toString();
+      if (tokenType != 'access') {
+        return null;
+      }
       return payload;
     }
     return null;
