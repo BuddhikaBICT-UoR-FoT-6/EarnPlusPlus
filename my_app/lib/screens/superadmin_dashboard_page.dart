@@ -5,10 +5,19 @@ import '../core/constants/app_spacing.dart';
 import '../features/admin/presentation/admin_controller.dart';
 
 class SuperAdminDashboardPage extends StatelessWidget {
-  const SuperAdminDashboardPage({super.key});
+  final AdminController? controller;
+
+  const SuperAdminDashboardPage({super.key, this.controller});
 
   @override
   Widget build(BuildContext context) {
+    if (controller != null) {
+      return ChangeNotifierProvider<AdminController>.value(
+        value: controller!,
+        child: const _SuperAdminDashboardView(),
+      );
+    }
+
     return ChangeNotifierProvider(
       create: (_) => AdminController()..loadSuperAdminDashboard(),
       child: const _SuperAdminDashboardView(),

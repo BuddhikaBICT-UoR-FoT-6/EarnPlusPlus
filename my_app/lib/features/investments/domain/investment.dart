@@ -33,8 +33,8 @@ class Investment {
   }
 
   Map<String, dynamic> toJson() => {
-        'date': date.toIso8601String().split('T').first,
-        'asset': asset,
-        'amount': amount.toString(),
-      };
+    'date': date.toIso8601String().split('T').first,
+    'asset': asset,
+    'amount': amount.toString(),
+  };
 }

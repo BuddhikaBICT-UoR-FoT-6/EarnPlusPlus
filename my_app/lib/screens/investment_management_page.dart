@@ -7,10 +7,19 @@ import '../features/investments/domain/investment.dart';
 import '../features/investments/presentation/investment_controller.dart';
 
 class InvestmentManagementPage extends StatelessWidget {
-  const InvestmentManagementPage({super.key});
+  final InvestmentController? controller;
+
+  const InvestmentManagementPage({super.key, this.controller});
 
   @override
   Widget build(BuildContext context) {
+    if (controller != null) {
+      return ChangeNotifierProvider<InvestmentController>.value(
+        value: controller!,
+        child: const _InvestmentManagementView(),
+      );
+    }
+
     return ChangeNotifierProvider(
       create: (_) => InvestmentController()..load(),
       child: const _InvestmentManagementView(),
