@@ -8,8 +8,29 @@
 // without changing the codebase, by simply setting the environment
 // variable when running the app.
 class AppConfig {
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080',
+  static const String appEnv = String.fromEnvironment(
+    'APP_ENV',
+    defaultValue: 'dev',
   );
+
+  static const String _apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: '',
+  );
+
+  static String get baseUrl {
+    if (_apiBaseUrl.isNotEmpty) {
+      return _apiBaseUrl;
+    }
+
+    if (appEnv == 'prod') {
+      return 'https://api.earnplusplus.com';
+    }
+
+    if (appEnv == 'staging') {
+      return 'https://staging-api.earnplusplus.com';
+    }
+
+    return 'http://10.0.2.2:8080';
+  }
 }

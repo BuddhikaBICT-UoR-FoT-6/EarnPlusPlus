@@ -8,12 +8,18 @@ import 'core/theme/app_theme.dart'; // importing the AppTheme class that defines
 // the visual styling for the application, including colors, typography, and input
 // decoration themes to maintain a consistent look and feel throughout the app
 import 'services/auth_service.dart';
+import 'services/telemetry_service.dart';
 import 'screens/login_page.dart';
 import 'screens/dashboard_page.dart'; // importing the main screens of the application,
 //  specifically LoginPage for authentication and DashboardPage for the main application
 // content, to be displayed based on the user's authentication status
 
-void main() => runApp(const MyApp()); // the main function is the entry point of
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  TelemetryService.instance.initialize();
+  TelemetryService.instance.logEvent('app_start');
+  runApp(const MyApp());
+} // the main function is the entry point of
 //  the application, telling the Flutter engine to run the MyApp widget as the root
 //  widget of the app's widget tree the Flutter application, which calls runApp
 // with an instance of MyApp to start the app and display the user interface defined
