@@ -64,6 +64,18 @@ class _RegisterViewState extends State<_RegisterView> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  @override
+  void initState() {
+    super.initState();
+    // Initialize queue service on screen load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final controller = context.read<RegisterController>();
+        controller.initQueueService();
+      }
+    });
+  }
+
   // the dispose method is overridden to clean up the TextEditingControllers when
   // the widget is removed from the widget tree, preventing memory leaks and ensuring
   // that resources are properly released when the registration screen is no longer in use.
@@ -129,6 +141,16 @@ class _RegisterViewState extends State<_RegisterView> {
             content: Text(
               'OTP sent to your email. Enter it to complete registration.',
             ),
+          ),
+        );
+      } else if (controller.isOffline) {
+        // Offline registration was queued; show message but don't navigate
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Registration queued. Will sync when network is available.',
+            ),
+            duration: Duration(seconds: 4),
           ),
         );
       } else {
@@ -205,6 +227,32 @@ class _RegisterViewState extends State<_RegisterView> {
                         child: Text(
                           controller.error!,
                           style: TextStyle(color: colors.onErrorContainer),
+                        ),
+                      ),
+                    if (controller.isOffline)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: colors.tertiaryContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.cloud_off_outlined,
+                              color: colors.onTertiaryContainer,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Offline: Queued for sync',
+                                style: TextStyle(
+                                  color: colors.onTertiaryContainer,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     Form(
