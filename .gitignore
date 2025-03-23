@@ -20,6 +20,9 @@ my_app/windows/flutter/ephemeral/
 # Dart server artifacts
 server/.dart_tool/
 server/pubspec.lock
+server/.env
+server/.env.*
+server/*.secrets
 
 # IDE
 .vscode/
@@ -38,5 +41,3 @@ my_app/macos/
 my_app/windows/
 my_app/web/
 
-# Server workspace currently excluded from this repo scope
-server/
