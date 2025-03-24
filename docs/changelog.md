@@ -2,6 +2,34 @@
 
 All notable project changes are documented in this file.
 
+## [1.8.0] - 2025-03-23
+### Added
+- Full server source tracking in repository (while excluding generated and sensitive files).
+- Frozen API contract documentation.
+- Release checklist document.
+
+### Changed
+- CI pipeline added for Flutter and server analyze/test checks.
+- App environment profile support (dev/staging/prod).
+- Basic telemetry bootstrap for app-start and runtime error/event logging.
+
+## [1.7.0] - 2025-03-20
+### Added
+- Widget tests for investment management, admin dashboard, and superadmin dashboard screens.
+
+### Changed
+- Screen constructors now support controller injection for testability.
+
+## [1.6.0] - 2025-03-19
+### Added
+- Refresh-token flow with `/auth/refresh` endpoint.
+- Logout-all session invalidation endpoint.
+
+### Changed
+- Access-token type enforcement on protected backend routes.
+- Client auth service now manages access and refresh tokens.
+- Drawer menu now hides admin/superadmin entries unless role permits access.
+
 ## [1.5.0] - 2025-03-18
 ### Added
 - Superadmin dashboard with role distribution metrics.
