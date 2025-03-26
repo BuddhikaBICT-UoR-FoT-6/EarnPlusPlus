@@ -124,6 +124,12 @@ class AuthService {
     await _secureStorage.delete(key: _refreshTokenKey);
   }
 
+  // the logoutAllSessions method calls the backend logout-all endpoint to invalidate
+  // all active sessions across all devices by incrementing the server's token_version.
+  // After the backend confirms the invalidation, it also clears local credentials
+  // so the current device is immediately logged out without waiting for token expiry.
+  // This protects the user if they suspect credential compromise or want a complete
+  // logout across all their sessions and devices.
   Future<void> logoutAllSessions() async {
     final token = await getValidToken();
     if (token == null || token.isEmpty) {
@@ -182,6 +188,12 @@ class AuthService {
     }
   }
 
+  // the _decodePayload method decodes a JWT token's payload without verifying
+  // the signature, allowing client-side inspection of claims like expiration time,
+  // role, and user ID. This enables optimizations like checking expiration locally
+  // before attempting a network request or gating UI elements based on role without
+  // re-fetching user data. The backend still performs authoritative validation on
+  // all API requests, ensuring security is not compromised by client-side claims.
   Map<String, dynamic>? _decodePayload(String token) {
     final parts = token.split('.');
     if (parts.length != 3) {
@@ -204,6 +216,12 @@ class AuthService {
     return token;
   }
 
+  // the _refreshAccessToken method attempts to silently renew the access token
+  // using the stored refresh token. If successful, it updates the local token and
+  // returns the new access token without interrupting the user experience. If the
+  // refresh fails (e.g., refresh token expired or revoked), it returns null,
+  // signaling that the user needs to re-authenticate. This enables uninterrupted
+  // app usage across long sessions without forcing explicit re-login on expiration.
   Future<String?> _refreshAccessToken() async {
     final refreshToken = await _getRefreshToken();
     if (refreshToken == null) {
