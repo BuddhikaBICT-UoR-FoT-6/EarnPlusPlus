@@ -11,6 +11,12 @@ class AdminDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // the build method checks whether a controller was injected (for testing)
+    // or whether the widget should create and manage its own controller instance.
+    // This dual-path pattern enables dependency injection for widget tests while
+    // preserving the default production behavior of lazy initialization. The
+    // controller is provided to the widget tree via ChangeNotifierProvider so
+    // child widgets can watch it for state changes.
     if (controller != null) {
       return ChangeNotifierProvider<AdminController>.value(
         value: controller!,
@@ -42,6 +48,12 @@ class _AdminDashboardView extends StatelessWidget {
   }
 
   Widget _buildBody(BuildContext context, AdminController controller) {
+    // the _buildBody method is intentionally structured as a state machine where
+    // each branch corresponds to a distinct loading or error state. This approach
+    // keeps the render logic clear and testable: if loading, show a progress bar;
+    // if forbidden or unauthorized, display a permission error; if successful, show
+    // the dashboard. Each state branch is mutually exclusive and renders appropriate
+    // feedback so users always know what the app is doing.
     if (controller.state == AdminLoadState.loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -111,6 +123,11 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // the _SummaryCard is a compact, reusable widget that displays a single
+    // metric (e.g., user count, investment total) in a consistent card-based
+    // layout. By extracting this into a separate widget, we reduce code duplication
+    // and ensure that all metric cards maintain uniform styling, typography, and
+    // spacing across the admin and superadmin dashboards.
     return Card(
       child: SizedBox(
         width: 150,

@@ -6,6 +6,11 @@ import 'package:my_app/features/admin/presentation/admin_controller.dart';
 import 'package:my_app/screens/admin_dashboard_page.dart';
 
 class _FakeAdminRepository extends AdminRepository {
+  // this fake repository provides deterministic, hard-coded responses for admin
+  // operations (fetch current user, admin summary, user list) without making
+  // network requests. Using a fake allows widget tests to run quickly and reliably
+  // by removing network and timing dependencies, ensuring that test assertions
+  // focus on UI behavior rather than API interactions.
   @override
   Future<UserAccount> fetchMe() async {
     return UserAccount(
@@ -36,6 +41,11 @@ class _FakeAdminRepository extends AdminRepository {
 
 void main() {
   testWidgets('renders admin dashboard summary and users', (tester) async {
+    // the test preloads the controller state (fetching user info, admin summary,
+    // and user list from the fake repository) before pumping the widget so that
+    // assertions can focus on verifying the UI renders the data correctly. This
+    // pattern avoids having to test async loading flows and keeps assertions clear
+    // and deterministic.
     final controller = AdminController(repository: _FakeAdminRepository());
     await controller.loadAdminDashboard();
 

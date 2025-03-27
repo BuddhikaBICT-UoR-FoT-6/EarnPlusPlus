@@ -11,6 +11,10 @@ class SuperAdminDashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // the build method follows the same dependency-injection pattern as admin_dashboard_page,
+    // accepting an optional controller for testing while defaulting to lazy initialization
+    // in production. This symmetry ensures that both dashboard types behave consistently
+    // and can be tested using the same patterns and fake-repository approach.
     if (controller != null) {
       return ChangeNotifierProvider<AdminController>.value(
         value: controller!,
@@ -42,6 +46,12 @@ class _SuperAdminDashboardView extends StatelessWidget {
   }
 
   Widget _buildBody(BuildContext context, AdminController controller) {
+    // the _buildBody method explicitly branches on each state to provide clear,
+    // role-specific error messages and permission feedback. When access is denied
+    // (403 Forbidden), it displays "You do not have superadmin access." When the
+    // session expires (401 Unauthorized), it prompts re-login. This explicit handling
+    // gives users actionable feedback and helps distinguish between authorization
+    // and authentication failures at a glance.
     if (controller.state == AdminLoadState.loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -91,7 +101,10 @@ class _SuperAdminDashboardView extends StatelessWidget {
             controller.error!,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
-        Text('Manage User Roles', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Manage User Roles',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: AppSpacing.xs),
         Expanded(
           child: ListView.separated(
@@ -101,12 +114,18 @@ class _SuperAdminDashboardView extends StatelessWidget {
               final user = controller.users[index];
               return ListTile(
                 title: Text(user.email),
-                subtitle: Text('Created ${user.createdAt.toIso8601String().split('T').first}'),
+                subtitle: Text(
+                  'Created ${user.createdAt.toIso8601String().split('T').first}',
+                ),
                 trailing: DropdownButton<String>(
                   value: user.role,
                   onChanged: controller.roleUpdateInProgress
                       ? null
                       : (value) {
+                          // the guard clause prevents redundant updates when the dropdown
+                          // selection hasn't changed, avoiding unnecessary network requests
+                          // and keeping the UI responsive. This is a common pattern for
+                          // dropdowns that might fire onChanged even when the value is the same.
                           if (value == null || value == user.role) {
                             return;
                           }
@@ -115,7 +134,10 @@ class _SuperAdminDashboardView extends StatelessWidget {
                   items: const [
                     DropdownMenuItem(value: 'user', child: Text('user')),
                     DropdownMenuItem(value: 'admin', child: Text('admin')),
-                    DropdownMenuItem(value: 'superadmin', child: Text('superadmin')),
+                    DropdownMenuItem(
+                      value: 'superadmin',
+                      child: Text('superadmin'),
+                    ),
                   ],
                 ),
               );
@@ -135,6 +157,10 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // the _SummaryCard widget presents metric labels and values in a compact,
+    // visually distinguishable card format. Extracting this shared presentation
+    // logic ensures consistency between admin and superadmin metric displays and
+    // makes future styling changes easy to implement across all dashboard cards.
     return Card(
       child: SizedBox(
         width: 150,

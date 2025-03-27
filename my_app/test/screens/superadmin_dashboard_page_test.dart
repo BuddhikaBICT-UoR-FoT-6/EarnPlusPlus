@@ -6,6 +6,11 @@ import 'package:my_app/features/admin/presentation/admin_controller.dart';
 import 'package:my_app/screens/superadmin_dashboard_page.dart';
 
 class _FakeSuperAdminRepository extends AdminRepository {
+  // this fake repository returns fixed superadmin payloads (current user info,
+  // superadmin summary with role distribution, and user list) so widget tests
+  // run fast and independently of the network. The deterministic data enables
+  // reliable assertions about UI rendering, role manager dropdown visibility,
+  // and role-count display without flakiness or timing issues.
   @override
   Future<UserAccount> fetchMe() async {
     return UserAccount(
@@ -40,6 +45,11 @@ class _FakeSuperAdminRepository extends AdminRepository {
 
 void main() {
   testWidgets('renders superadmin dashboard and role manager', (tester) async {
+    // the test initializes the controller with the fake repository and calls
+    // loadSuperAdminDashboard() to populate state before pumping the widget.
+    // This ensures the dashboard renders with loaded data, allowing assertions
+    // to verify the role manager dropdown and superadmin-specific metrics display
+    // correctly without having to simulate the loading flow.
     final controller = AdminController(repository: _FakeSuperAdminRepository());
     await controller.loadSuperAdminDashboard();
 
