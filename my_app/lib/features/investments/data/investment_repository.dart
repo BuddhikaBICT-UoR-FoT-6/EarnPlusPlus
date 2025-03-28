@@ -65,6 +65,11 @@ class InvestmentRepository {
         .toList();
   }
 
+  // the createInvestment method sends a new investment record to the API and
+  // returns the created record as returned by the server. This allows the client
+  // to retrieve server-generated fields (like the investment ID) without making
+  // an additional GET request, keeping the UI state consistent with what the
+  // server persisted. The method handles authentication and network timeouts.
   Future<Investment> createInvestment({
     required DateTime date,
     required String asset,
@@ -102,6 +107,11 @@ class InvestmentRepository {
     return Investment.fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
   }
 
+  // the updateInvestment method sends the full updated record payload to the
+  // API and returns the server's confirmation of the update. The method validates
+  // that the investment belongs to the authenticated user before allowing the
+  // update to proceed, ensuring users cannot modify other users' investments.
+  // The returned record reflects any server-side transformations or defaults.
   Future<Investment> updateInvestment({
     required int id,
     required DateTime date,
@@ -140,6 +150,11 @@ class InvestmentRepository {
     return Investment.fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
   }
 
+  // the deleteInvestment method removes an investment record from the server
+  // and, on success, removes the corresponding item from the local list. The
+  // isMutating flag prevents UI race conditions, and the state is updated to
+  // reflect whether investments remain (success) or all are gone (empty state).
+  // This local-list update avoids an unnecessary refetch after deletion.
   Future<void> deleteInvestment(int id) async {
     final token = await _authService.getValidToken();
     if (token == null || token.isEmpty) {

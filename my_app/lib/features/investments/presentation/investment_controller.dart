@@ -13,12 +13,12 @@ import '../domain/investment.dart';
 // or the list of investments.
 enum InvestmentLoadState { idle, loading, success, empty, error, unauthorized }
 
-// The InvestmentController class extends ChangeNotifier to manage the state of
+// the InvestmentController extends ChangeNotifier to manage the state of
 // investment data and notify listeners when changes occur. It interacts with the
-// InvestmentRepository to fetch data, and it provides methods to filter investments
-// by asset, calculate total and average invested amounts, and handle loading states
-// and errors. The controller maintains the list of investments, the selected asset
-// for filtering, and any error messages that may arise during data fetching.
+// InvestmentRepository to fetch, create, update, and delete investments. The
+// controller tracks loading state, errors, and provides filtered and aggregated
+// views of investments (by asset, total amount, average amount) for display in
+// the UI. When state changes, it calls notifyListeners() to trigger UI rebuilds.
 class InvestmentController extends ChangeNotifier {
   final InvestmentRepository _repository;
 
@@ -112,6 +112,12 @@ class InvestmentController extends ChangeNotifier {
     // investments to display
   }
 
+  // the addInvestment method creates a new investment record via the repository
+  // and immediately adds it to the local list, sorting by date to maintain a
+  // consistent display order. The isMutating flag is set to true during the operation,
+  // allowing the UI to disable action buttons and prevent duplicate submissions.
+  // If the operation fails, the error is captured and the UI is notified so users
+  // see feedback about what went wrong.
   Future<bool> addInvestment({
     required DateTime date,
     required String asset,
@@ -145,6 +151,11 @@ class InvestmentController extends ChangeNotifier {
     }
   }
 
+  // the updateInvestment method sends a full update payload to the repository
+  // and, on success, replaces the matching investment record in the local list
+  // with the returned updated record. This keeps the UI state in sync with the
+  // server without requiring a full list refetch, reducing network overhead and
+  // latency. Sorting is reapplied to maintain chronological order if needed.
   Future<bool> updateInvestment({
     required int id,
     required DateTime date,
@@ -162,10 +173,9 @@ class InvestmentController extends ChangeNotifier {
         asset: asset,
         amount: amount,
       );
-      _investments = _investments
-          .map((it) => it.id == id ? updated : it)
-          .toList()
-        ..sort((a, b) => a.date.compareTo(b.date));
+      _investments =
+          _investments.map((it) => it.id == id ? updated : it).toList()
+            ..sort((a, b) => a.date.compareTo(b.date));
       return true;
     } on InvestmentUnauthorizedException {
       _state = InvestmentLoadState.unauthorized;
@@ -179,6 +189,11 @@ class InvestmentController extends ChangeNotifier {
     }
   }
 
+  // the deleteInvestment method removes an investment record from the server
+  // and, on success, removes the corresponding item from the local list. The
+  // isMutating flag prevents UI race conditions, and the state is updated to
+  // reflect whether investments remain (success) or all are gone (empty state).
+  // This local-list update avoids an unnecessary refetch after deletion.
   Future<bool> deleteInvestment(int id) async {
     isMutating = true;
     actionError = null;
