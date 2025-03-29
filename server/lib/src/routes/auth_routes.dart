@@ -31,6 +31,7 @@ String _signAccessToken({
   required String role,
   required int tokenVersion,
 }) {
+  // access tokens are short-lived and used for normal API authorization.
   final jwt = JWT(
     {
       'sub': userId,
@@ -48,6 +49,12 @@ String _signAccessToken({
   );
 }
 
+// the _signRefreshToken helper function creates a long-lived JWT that is used
+// only to mint new access tokens. Refresh tokens have a 14-day expiration and
+// are stored securely on the client, allowing users to remain logged in for
+// extended periods without re-entering credentials. The refresh token includes
+// the token_version claim, enabling server-side session invalidation by incrementing
+// the version when the user logs out from all sessions.
 String _signRefreshToken({
   required ServerConfig config,
   required int userId,
@@ -55,6 +62,7 @@ String _signRefreshToken({
   required String role,
   required int tokenVersion,
 }) {
+  // refresh tokens are longer-lived and only used to mint new access tokens.
   final jwt = JWT(
     {
       'sub': userId,
@@ -102,9 +110,21 @@ int? _userIdFromClaims(Map<String, dynamic> claims) {
   return null;
 }
 
+// The authRoutes function defines authentication endpoints for user registration,
+// login, token refresh, and logout operations. It implements a two-token system
+// with short-lived access tokens for API requests and longer-lived refresh tokens
+// for silent renewal. Role-based access control is enforced at the route level,
+// and token_version tracking enables immediate invalidation of all sessions when
+// a user logs out from all devices.
 Router authRoutes(MySqlConnection conn, ServerConfig config) {
   final router = Router();
 
+  // the POST /auth/register endpoint creates a new user account with the provided
+  // email and password. It validates input (email format, password length), checks
+  // for duplicate emails, and automatically assigns the first user to the superadmin
+  // role to enable initial system administration. Subsequent users are assigned the
+  // regular user role. Passwords are hashed using bcrypt before storage, ensuring
+  // that plaintext passwords are never persisted to the database.
   router.post('/auth/register', (Request req) async {
     try {
       final data = await _readJson(req);
@@ -131,7 +151,8 @@ Router authRoutes(MySqlConnection conn, ServerConfig config) {
         return _json(400, {'message': 'Email already registered'});
       }
 
-      final userCountRows = await conn.query('SELECT COUNT(*) AS total FROM users');
+      final userCountRows =
+          await conn.query('SELECT COUNT(*) AS total FROM users');
       final totalUsers = (userCountRows.first['total'] as num).toInt();
       final role = totalUsers == 0 ? 'superadmin' : 'user';
 
@@ -151,6 +172,11 @@ Router authRoutes(MySqlConnection conn, ServerConfig config) {
     }
   });
 
+  // the POST /auth/login endpoint verifies the user's email and password credentials
+  // against the stored bcrypt hash. On successful authentication, it returns both
+  // an access token (1-hour expiration for API calls) and a refresh token (14-day
+  // expiration for silent renewal). The response also includes the user's role so
+  // the client can immediately render role-appropriate UI without an extra profile fetch.
   router.post('/auth/login', (Request req) async {
     try {
       final data = await _readJson(req);
@@ -169,8 +195,8 @@ Router authRoutes(MySqlConnection conn, ServerConfig config) {
       }
 
       final userId = rows.first['id'] as int;
-        final role = (rows.first['role'] ?? 'user').toString();
-        final tokenVersion = (rows.first['token_version'] as num?)?.toInt() ?? 0;
+      final role = (rows.first['role'] ?? 'user').toString();
+      final tokenVersion = (rows.first['token_version'] as num?)?.toInt() ?? 0;
       final passwordHash = rows.first['password_hash'] as String;
 
       if (!BCrypt.checkpw(password, passwordHash)) {
@@ -202,6 +228,12 @@ Router authRoutes(MySqlConnection conn, ServerConfig config) {
     }
   });
 
+  // the POST /auth/refresh endpoint accepts a refresh token and returns a new
+  // access token without requiring the user to log in again. This enables silent
+  // token renewal for a seamless user experience. The endpoint validates that the
+  // refresh token is properly signed, has the correct token type, and that the
+  // token_version matches the current server version (enabling logout-all revocation).
+  // If the token_version is out of sync, the token is treated as revoked.
   router.post('/auth/refresh', (Request req) async {
     try {
       final data = await _readJson(req);
@@ -257,6 +289,13 @@ Router authRoutes(MySqlConnection conn, ServerConfig config) {
     }
   });
 
+  // the POST /auth/logout-all endpoint invalidates all of the user's active
+  // sessions across all devices. It works by incrementing the token_version in
+  // the database, causing all existing refresh and access tokens to become invalid
+  // on next use. This is useful when a user suspects their credentials are
+  // compromised or wants to force re-authentication across all their sessions.
+  // The endpoint requires a valid access token and immediately logs out the
+  // current session as well.
   router.post('/auth/logout-all', (Request req) async {
     final claims = _verifyBearerClaims(req, config.jwtSecret);
     if (claims == null || (claims['typ'] ?? 'access').toString() != 'access') {

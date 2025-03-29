@@ -55,11 +55,23 @@ String _roleFromClaims(Map<String, dynamic> claims) {
   return 'user';
 }
 
-bool _isAdminOrSuperadmin(String role) => role == 'admin' || role == 'superadmin';
+bool _isAdminOrSuperadmin(String role) =>
+    role == 'admin' || role == 'superadmin';
 
+// The userRoutes function defines routes for user and admin account management,
+// including endpoints for fetching the current user's profile, listing all users
+// for administrative purposes, retrieving admin and superadmin dashboard metrics,
+// and updating user roles. Each route enforces role-based access control to ensure
+// that only authorized users can access sensitive administrative data and perform
+// privileged operations like role changes.
 Router userRoutes(MySqlConnection conn, ServerConfig config) {
   final router = Router();
 
+  // the /users/me endpoint returns the currently authenticated user's profile
+  // details, including their email, role, and created timestamp. This endpoint
+  // allows the frontend to display the logged-in user's information and determine
+  // which role-specific UI sections should be shown, ensuring that the dashboard
+  // renders role-aware content without hardcoding user data locally.
   router.get('/users/me', (Request req) async {
     final claims = _claims(req, config.jwtSecret);
     if (claims == null) {
@@ -90,6 +102,12 @@ Router userRoutes(MySqlConnection conn, ServerConfig config) {
     });
   });
 
+  // the /admin/users endpoint retrieves the full list of user accounts from the
+  // database, accessible only to users with admin or superadmin roles. This list
+  // is used by the admin and superadmin dashboards to display user tables, allowing
+  // administrators to view all registered users and their roles. The endpoint respects
+  // role-based access control by returning a 403 Forbidden response if the caller
+  // lacks sufficient permissions.
   router.get('/admin/users', (Request req) async {
     final claims = _claims(req, config.jwtSecret);
     if (claims == null) {
@@ -120,6 +138,12 @@ Router userRoutes(MySqlConnection conn, ServerConfig config) {
     return _json(200, users);
   });
 
+  // the /admin/dashboard endpoint aggregates key application metrics for the
+  // admin dashboard, including the total number of users, total investments, and
+  // the sum of all investment amounts across the system. These metrics are displayed
+  // as summary cards in the admin interface, giving administrators visibility into
+  // the overall health and scale of the application without needing to query raw
+  // data. Access is restricted to users with admin or superadmin roles.
   router.get('/admin/dashboard', (Request req) async {
     final claims = _claims(req, config.jwtSecret);
     if (claims == null) {
@@ -132,9 +156,12 @@ Router userRoutes(MySqlConnection conn, ServerConfig config) {
     }
 
     await conn.query('USE ${config.dbName}');
-    final userCountRows = await conn.query('SELECT COUNT(*) AS total FROM users');
-    final investmentCountRows = await conn.query('SELECT COUNT(*) AS total FROM investments');
-    final totalAmountRows = await conn.query('SELECT COALESCE(SUM(amount), 0) AS total FROM investments');
+    final userCountRows =
+        await conn.query('SELECT COUNT(*) AS total FROM users');
+    final investmentCountRows =
+        await conn.query('SELECT COUNT(*) AS total FROM investments');
+    final totalAmountRows = await conn
+        .query('SELECT COALESCE(SUM(amount), 0) AS total FROM investments');
 
     return _json(200, {
       'users': (userCountRows.first['total'] as num).toInt(),
@@ -143,6 +170,13 @@ Router userRoutes(MySqlConnection conn, ServerConfig config) {
     });
   });
 
+  // the /superadmin/dashboard endpoint provides system-level metrics exclusively
+  // to superadmin users, including the count of users, investments, and a detailed
+  // breakdown of users by role (user, admin, superadmin). This role distribution
+  // helps superadmins monitor governance and ensure that administrative privileges
+  // are appropriately distributed across the user base. Access is restricted to
+  // superadmin role only, preventing lower-privilege admins from viewing this
+  // sensitive governance data.
   router.get('/superadmin/dashboard', (Request req) async {
     final claims = _claims(req, config.jwtSecret);
     if (claims == null) {
@@ -169,8 +203,10 @@ Router userRoutes(MySqlConnection conn, ServerConfig config) {
       roles[(row['role'] ?? 'user').toString()] = (row['total'] as num).toInt();
     }
 
-    final userCountRows = await conn.query('SELECT COUNT(*) AS total FROM users');
-    final investmentCountRows = await conn.query('SELECT COUNT(*) AS total FROM investments');
+    final userCountRows =
+        await conn.query('SELECT COUNT(*) AS total FROM users');
+    final investmentCountRows =
+        await conn.query('SELECT COUNT(*) AS total FROM investments');
 
     return _json(200, {
       'users': (userCountRows.first['total'] as num).toInt(),
@@ -179,6 +215,13 @@ Router userRoutes(MySqlConnection conn, ServerConfig config) {
     });
   });
 
+  // the /superadmin/users/<id>/role endpoint allows superadmin users to change
+  // any user's role, supporting user promotion to admin or demotion back to regular
+  // user status. This endpoint enforces strict access control—only superadmin roles
+  // can call it—and validates the target role before applying the update, ensuring
+  // that only valid role transitions (user, admin, superadmin) are persisted to
+  // the database. Role changes are immediately effective, affecting the user's
+  // access control on subsequent authentication or role checks.
   router.patch('/superadmin/users/<id>/role', (Request req, String id) async {
     final claims = _claims(req, config.jwtSecret);
     if (claims == null) {
