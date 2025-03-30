@@ -36,7 +36,7 @@ Future<List<Map<String, dynamic>>> _fetchInvestments(
   // Transform database rows into a list of maps with formatted data
   return results
       .map((row) => {
-          'id': row['id'] as int,
+            'id': row['id'] as int,
             // Convert DateTime to ISO8601 string and extract only the date part
             'date':
                 (row['date'] as DateTime).toIso8601String().split('T').first,
@@ -47,6 +47,11 @@ Future<List<Map<String, dynamic>>> _fetchInvestments(
       .toList();
 }
 
+// the _readJson helper function standardizes request body parsing across all
+// mutation endpoints. It reads the raw request body, decodes it as JSON, and
+// ensures that the result is a JSON object (not an array or primitive), throwing
+// a FormatException if the body is malformed or not a valid object. This centralized
+// parsing ensures consistent error handling and DX across POST, PUT, and DELETE routes.
 Future<Map<String, dynamic>> _readJson(Request request) async {
   final body = await request.readAsString();
   final decoded = jsonDecode(body);
@@ -56,6 +61,11 @@ Future<Map<String, dynamic>> _readJson(Request request) async {
   return decoded;
 }
 
+// the _parseDate helper validates and parses the date field from request payloads.
+// It checks that the date is provided (not null) and that it can be parsed as a
+// valid DateTime. By centralizing this parsing logic, all investment creation and
+// update endpoints use the same validation rules and error messages, ensuring
+// consistent API behavior and making error handling predictable for clients.
 DateTime _parseDate(Object? value) {
   if (value == null) {
     throw const FormatException('date is required');
@@ -63,6 +73,11 @@ DateTime _parseDate(Object? value) {
   return DateTime.parse(value.toString());
 }
 
+// the _parseAsset helper validates and normalizes the asset name from request
+// payloads. It trims whitespace and ensures the asset is not empty, rejecting
+// blank or whitespace-only values that would create invalid portfolio entries.
+// This validation keeps the database clean and ensures that users cannot add
+// meaningless placeholder assets to their investment records.
 String _parseAsset(Object? value) {
   final asset = (value ?? '').toString().trim();
   if (asset.isEmpty) {
@@ -71,6 +86,11 @@ String _parseAsset(Object? value) {
   return asset;
 }
 
+// the _parseAmount helper validates that the investment amount is a positive
+// number and coerces it to a double. It rejects zero, negative, or non-numeric
+// values, ensuring that only valid investment amounts are recorded. This prevents
+// nonsensical data like negative investments or zero-value entries from polluting
+// the portfolio, maintaining data integrity and meaningful aggregations.
 double _parseAmount(Object? value) {
   if (value is num) {
     return value.toDouble();
@@ -145,6 +165,11 @@ Router investmentRoutes(MySqlConnection conn, ServerConfig config) {
     return _json(200, list);
   });
 
+  // the POST /investments endpoint creates a new investment record for the
+  // authenticated user. The endpoint validates the date, asset, and amount fields
+  // using the centralized parser helpers, then inserts the record into the database.
+  // On success, it returns a 201 Created status with the full created record,
+  // allowing the client to immediately display the new investment without an extra fetch.
   router.post('/investments', (Request req) async {
     final userId = _extractUserId(req, config.jwtSecret);
     if (userId == null) {
@@ -172,6 +197,11 @@ Router investmentRoutes(MySqlConnection conn, ServerConfig config) {
     }
   });
 
+  // the PUT /investments/<id> endpoint updates an existing investment record,
+  // but only if the investment belongs to the authenticated user. This scopes
+  // mutations to the user's own data, preventing one user from modifying another's
+  // investments. The endpoint re-validates all fields (date, asset, amount) and
+  // returns the updated record on success, keeping client state in sync with the server.
   router.put('/investments/<id>', (Request req, String id) async {
     final userId = _extractUserId(req, config.jwtSecret);
     if (userId == null) {
@@ -218,6 +248,12 @@ Router investmentRoutes(MySqlConnection conn, ServerConfig config) {
     }
   });
 
+  // the DELETE /investments/<id> endpoint permanently removes an investment
+  // record, but only if it belongs to the authenticated user. This ensures users
+  // can only manage their own investments and prevents accidental or malicious
+  // deletions of other users' portfolio entries. The endpoint returns a 200 OK
+  // on success with a confirmation message, or 404 if the investment does not exist
+  // or does not belong to the caller.
   router.delete('/investments/<id>', (Request req, String id) async {
     final userId = _extractUserId(req, config.jwtSecret);
     if (userId == null) {
