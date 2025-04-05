@@ -120,7 +120,7 @@ class _SplashScreenState extends State<SplashScreen>
                     Text(
                       'Smart Investment Management',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppColors.textLight.withOpacity(0.85),
+                        color: AppColors.textLight.withValues(alpha: 0.85),
                         fontWeight: FontWeight.w400,
                         letterSpacing: 0.3,
                       ),
@@ -147,12 +147,12 @@ class _SplashScreenState extends State<SplashScreen>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadowDark.withOpacity(0.5),
+            color: AppColors.shadowDark.withValues(alpha: 0.5),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
           BoxShadow(
-            color: AppColors.accentGreen.withOpacity(0.2),
+            color: AppColors.accentGreen.withValues(alpha: 0.2),
             blurRadius: 60,
             offset: const Offset(0, 20),
           ),
@@ -172,7 +172,7 @@ class _SplashScreenState extends State<SplashScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: AppColors.textLight.withOpacity(0.3),
+                color: AppColors.textLight.withValues(alpha: 0.3),
                 width: 2,
               ),
             ),

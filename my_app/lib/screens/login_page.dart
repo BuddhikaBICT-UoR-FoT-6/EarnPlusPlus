@@ -89,7 +89,7 @@ class _LoginViewState extends State<_LoginView> {
                             Icon(
                               Icons.trending_up,
                               size: 48,
-                              color: AppColors.textLight.withOpacity(0.9),
+                              color: AppColors.textLight.withValues(alpha: 0.9),
                             ),
                             const SizedBox(height: 12),
                             Text(
