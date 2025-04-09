@@ -2,8 +2,18 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 /// The AppTheme class defines production-grade visual styling for Earn++.
-/// It includes custom typography, component styles, and color schemes
-/// that provide a consistent, modern, and accessible user interface.
+/// It implements a comprehensive design system with:
+/// - Material 3 design principles and dynamic theming
+/// - Consistent typography hierarchy with custom font scales
+/// - Custom component theming (buttons, inputs, app bar, cards, etc.)
+/// - Accessible color contrasts meeting WCAG AA standards
+/// - Smooth animations and transitions for enhanced UX
+/// - Responsive spacing and sizing adapted to screen dimensions
+///
+/// The design system ensures visual consistency across the entire application
+/// while providing flexibility for future theme variations (dark mode, etc.).
+/// All components use the centralized AppColors palette for easy maintenance
+/// and brand consistency throughout the codebase.
 class AppTheme {
   // Private constructor to prevent instantiation
   AppTheme._();
