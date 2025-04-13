@@ -1,20 +1,18 @@
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/material.dart'; // importing the Flutter material package
-// to use Material Design components and widgets for building the user interface
-// of the application
-import 'package:provider/provider.dart'; // for state management, allowing the app
-// to manage and provide state across
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../core/constants/app_spacing.dart';
-import '../core/constants/app_strings.dart';
-import '../core/utils/decimal_format.dart';
-import '../features/investments/domain/investment.dart';
-import '../features/investments/presentation/investment_controller.dart';
-import '../services/auth_service.dart';
-import 'admin_dashboard_page.dart';
-import 'investment_management_page.dart';
-import 'login_page.dart';
-import 'superadmin_dashboard_page.dart';
+import 'package:my_app/core/constants/app_spacing.dart';
+import 'package:my_app/core/constants/app_strings.dart';
+import 'package:my_app/core/utils/decimal_format.dart';
+import 'package:my_app/core/widgets/animated_widgets.dart';
+import 'package:my_app/features/investments/domain/investment.dart';
+import 'package:my_app/features/investments/presentation/investment_controller.dart';
+import 'package:my_app/services/auth_service.dart';
+import 'package:my_app/screens/admin_dashboard_page.dart';
+import 'package:my_app/screens/investment_management_page.dart';
+import 'package:my_app/screens/login_page.dart';
+import 'package:my_app/screens/superadmin_dashboard_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({
@@ -262,59 +260,52 @@ class _DashboardView extends StatelessWidget {
                 child: Center(child: Text(AppStrings.emptyInvestments)),
               ),
             if (controller.state == InvestmentLoadState.success) ...[
-              Row(
-                // If the state of the controller is success, it means that the
-                // investment data has been successfully loaded and is available
-                // for display. In this case, we show a row of metric cards that
-                // display key information about the investments, such as the total
-                // invested amount, the average invested amount, and the count of
-                // investments. Each metric is displayed in a _MetricCard widget,
-                // which formats the title and value in a visually appealing way.
-                // The values are formatted using the decimalToFixed function to
-                // ensure they are displayed with a consistent number of decimal
-                // places. This provides the user with a quick overview of their
-                // investment portfolio at a glance.
-                children: [
-                  // displayed as rows of metric cards one below another
-                  _MetricCard(
-                    title: 'Total Invested',
-                    value: decimalToFixed(
-                      controller.totalInvested,
-                      fractionDigits: 2,
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    AnimatedCard(
+                      duration: const Duration(milliseconds: 800),
+                      delay: Duration.zero,
+                      child: AnimatedKpiCard(
+                        title: 'Total Invested',
+                        value: controller.totalInvested.toDouble(),
+                        fractionDigits: 2,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  _MetricCard(
-                    title: 'Average',
-                    value: decimalToFixed(
-                      controller.averageInvested,
-                      fractionDigits: 2,
+                    const SizedBox(width: AppSpacing.sm),
+                    AnimatedCard(
+                      duration: const Duration(milliseconds: 800),
+                      delay: const Duration(milliseconds: 150),
+                      child: AnimatedKpiCard(
+                        title: 'Average',
+                        value: controller.averageInvested.toDouble(),
+                        fractionDigits: 2,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  _MetricCard(
-                    title: 'Count',
-                    value: controller.filtered.length.toString(),
-                  ),
-                ],
+                    const SizedBox(width: AppSpacing.sm),
+                    AnimatedCard(
+                      duration: const Duration(milliseconds: 800),
+                      delay: const Duration(milliseconds: 300),
+                      child: AnimatedKpiCard(
+                        title: 'Count',
+                        value: controller.filtered.length.toDouble(),
+                        fractionDigits: 0,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
               Expanded(
-                // The Expanded widget is used to fill the remaining space in the
-                // column with the main content of the dashboard, which includes
-                // a row that contains a line chart and a list of recent investments.
-                // The line chart is displayed in a card on the left side, showing
-                // the invested amount over time based on the filtered investments.
-                // The list of recent investments is displayed in a card on the
-                // right side, showing the most recent investment entries with their
-                // asset name, amount, and date. This layout allows the user to
-                // easily visualize their investment trends and see their most recent
-                // activity in one view.
                 child: Row(
                   children: [
                     Expanded(
                       flex: 2,
-                      child: Card(
+                      child: AnimatedCard(
+                        duration: const Duration(milliseconds: 1000),
+                        delay: const Duration(milliseconds: 200),
+                        elevation: 4,
                         child: Padding(
                           padding: const EdgeInsets.all(AppSpacing.sm),
                           child: Column(
@@ -336,12 +327,11 @@ class _DashboardView extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
-                      // The Expanded widget with flex: 1 is used to allocate a
-                      // smaller portion of the horizontal space to the list of
-                      // recent investments compared to the line chart. This allows
-                      // the line chart to take up more space
                       flex: 1,
-                      child: Card(
+                      child: AnimatedCard(
+                        duration: const Duration(milliseconds: 1000),
+                        delay: const Duration(milliseconds: 400),
+                        elevation: 4,
                         child: Padding(
                           padding: const EdgeInsets.all(AppSpacing.sm),
                           child: Column(
@@ -356,27 +346,24 @@ class _DashboardView extends StatelessWidget {
                                   itemCount: controller.filtered.length,
                                   itemBuilder: (context, i) {
                                     final inv = controller.filtered.reversed
-                                        .toList()[i]; // The list of investments is reversed to
-                                    // show the most recent investments at the
-                                    // top of the list. The itemBuilder creates
-                                    // a ListTile for each investment, displaying
-                                    // the asset name and amount as the title,
-                                    // and the date of the investment as the
-                                    // subtitle. This provides a clear and
-                                    // concise view of the user's recent investment
-                                    // activity, allowing them to quickly see
-                                    // their latest transactions.
-                                    return ListTile(
-                                      dense: true,
-                                      title: Text(
-                                        '${inv.asset} - ${decimalToFixed(inv.amount, fractionDigits: 2)}',
+                                        .toList()[i];
+                                    return AnimatedFadeIn(
+                                      duration: const Duration(
+                                        milliseconds: 600,
                                       ),
-                                      subtitle: Text(
-                                        inv.date
-                                            .toLocal()
-                                            .toIso8601String()
-                                            .split('T')
-                                            .first,
+                                      delay: Duration(milliseconds: i * 100),
+                                      child: ListTile(
+                                        dense: true,
+                                        title: Text(
+                                          '${inv.asset} - ${decimalToFixed(inv.amount, fractionDigits: 2)}',
+                                        ),
+                                        subtitle: Text(
+                                          inv.date
+                                              .toLocal()
+                                              .toIso8601String()
+                                              .split('T')
+                                              .first,
+                                        ),
                                       ),
                                     );
                                   },
@@ -468,43 +455,44 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-// the _MetricCard widget is a reusable component that displays a title and a value
-// in a card format. It is used in the dashboard to show key metrics such as total
-// invested amount, average invested amount, and count of investments. The widget
-// takes a title and a value as parameters and formats them in a visually appealing way,
-// with the title displayed in a smaller, grey font and the value displayed in a larger,
-// bold font.
-class _MetricCard extends StatelessWidget {
+// Animated KPI card with count-up animation and improved styling.
+class AnimatedKpiCard extends StatelessWidget {
   final String title;
-  final String value;
+  final double value;
+  final int fractionDigits;
 
-  const _MetricCard({
+  const AnimatedKpiCard({
     required this.title,
     required this.value,
-  }); // the constructor
-  // for the _MetricCard widget takes a title and a value as required parameters,
-  // ensuring that the widget is properly initialized with the necessary information
-  // to display the metric in a consistent format across the dashboard.
+    this.fractionDigits = 2,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             vertical: AppSpacing.lg,
             horizontal: AppSpacing.md,
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).hintColor,
+                ),
               ),
               const SizedBox(height: AppSpacing.xs),
-              Text(
-                value,
-                style: const TextStyle(
+              AnimatedCount(
+                value: value,
+                fractionDigits: fractionDigits,
+                textStyle: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -513,6 +501,32 @@ class _MetricCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// Small widget that animates a numeric value from 0 to target using a Tween.
+class AnimatedCount extends StatelessWidget {
+  final double value;
+  final int fractionDigits;
+  final TextStyle? textStyle;
+
+  const AnimatedCount({
+    required this.value,
+    this.fractionDigits = 2,
+    this.textStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: value),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutCubic,
+      builder: (context, val, child) {
+        final text = val.toStringAsFixed(fractionDigits);
+        return Text(text, style: textStyle);
+      },
     );
   }
 }
