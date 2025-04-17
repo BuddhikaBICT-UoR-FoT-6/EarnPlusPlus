@@ -183,22 +183,21 @@ class _DashboardView extends StatelessWidget {
           },
         ),
       ),
-      body: Padding(
-        // The padding property adds space around the content of the DashboardView,
-        // ensuring that the widgets inside are not too close to the edges of the screen.
-        // This improves the visual appeal and readability of the dashboard by providing
-        // adequate spacing. The EdgeInsets.all(AppSpacing.md) applies equal padding
-        // of AppSpacing.md (medium spacing) on all sides of the content.
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          // The Column widget is used to layout the child widgets vertically.
-          // It contains a Row for the asset filter and refresh button, followed
-          // by conditional widgets that display loading indicators, error messages,
-          // metrics, charts, and lists based on the state of the InvestmentController.
-          // This allows the dashboard to present investment data in an organized
-          // and user-friendly manner, with different UI elements shown or hidden
-          // depending on the current state of data loading and availability.
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await controller.load();
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSpacing.md),
           children: [
+            // The Column widget is used to layout the child widgets vertically.
+            // It contains a Row for the asset filter and refresh button, followed
+            // by conditional widgets that display loading indicators, error messages,
+            // metrics, charts, and lists based on the state of the InvestmentController.
+            // This allows the dashboard to present investment data in an organized
+            // and user-friendly manner, with different UI elements shown or hidden
+            // depending on the current state of data loading and availability.
             Row(
               children: [
                 const Text('Asset:'),
@@ -256,7 +255,8 @@ class _DashboardView extends StatelessWidget {
               // there are no investments to display. In this case, we show a message
               // to the user indicating that there are no investments available.
               // The message is centered on the screen
-              const Expanded(
+              const SizedBox(
+                height: 220,
                 child: Center(child: Text(AppStrings.emptyInvestments)),
               ),
             if (controller.state == InvestmentLoadState.success) ...[
@@ -297,7 +297,8 @@ class _DashboardView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              Expanded(
+              SizedBox(
+                height: 420,
                 child: Row(
                   children: [
                     Expanded(
