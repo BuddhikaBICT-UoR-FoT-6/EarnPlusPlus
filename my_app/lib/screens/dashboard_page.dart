@@ -244,7 +244,7 @@ class _DashboardView extends StatelessWidget {
             // vertical space between the asset filter row and the subsequent
             // content, improving the visual separation and layout of the dashboard.
             if (controller.state == InvestmentLoadState.loading)
-              const LinearProgressIndicator(),
+              const _DashboardLoadingShimmer(),
             if (controller.state == InvestmentLoadState.error)
               _ErrorBanner(
                 message: controller.error ?? 'Something went wrong',
@@ -317,8 +317,14 @@ class _DashboardView extends StatelessWidget {
                               ),
                               const SizedBox(height: AppSpacing.sm),
                               Expanded(
-                                child: _SimpleLineChart(
-                                  investments: controller.filtered,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 500),
+                                  switchInCurve: Curves.easeOutCubic,
+                                  switchOutCurve: Curves.easeInCubic,
+                                  child: _SimpleLineChart(
+                                    key: ValueKey(controller.filtered.length),
+                                    investments: controller.filtered,
+                                  ),
                                 ),
                               ),
                             ],
@@ -463,6 +469,7 @@ class AnimatedKpiCard extends StatelessWidget {
   final int fractionDigits;
 
   const AnimatedKpiCard({
+    super.key,
     required this.title,
     required this.value,
     this.fractionDigits = 2,
@@ -513,6 +520,7 @@ class AnimatedCount extends StatelessWidget {
   final TextStyle? textStyle;
 
   const AnimatedCount({
+    super.key,
     required this.value,
     this.fractionDigits = 2,
     this.textStyle,
@@ -532,6 +540,96 @@ class AnimatedCount extends StatelessWidget {
   }
 }
 
+class _DashboardLoadingShimmer extends StatelessWidget {
+  const _DashboardLoadingShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: const [
+        _ShimmerBlock(height: 4, radius: 2),
+        SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            Expanded(child: _ShimmerBlock(height: 84, radius: 12)),
+            SizedBox(width: AppSpacing.sm),
+            Expanded(child: _ShimmerBlock(height: 84, radius: 12)),
+            SizedBox(width: AppSpacing.sm),
+            Expanded(child: _ShimmerBlock(height: 84, radius: 12)),
+          ],
+        ),
+        SizedBox(height: AppSpacing.md),
+        _ShimmerBlock(height: 260, radius: 12),
+      ],
+    );
+  }
+}
+
+class _ShimmerBlock extends StatefulWidget {
+  final double height;
+  final double radius;
+
+  const _ShimmerBlock({required this.height, this.radius = 10});
+
+  @override
+  State<_ShimmerBlock> createState() => _ShimmerBlockState();
+}
+
+class _ShimmerBlockState extends State<_ShimmerBlock>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t = _controller.value;
+        final start = Color.lerp(
+          scheme.surfaceContainerHighest,
+          scheme.surface,
+          0.4 + (t * 0.2),
+        );
+        final end = Color.lerp(
+          scheme.surfaceContainerHighest,
+          scheme.surface,
+          0.6 + (t * 0.2),
+        );
+        return Container(
+          height: widget.height,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                start ?? scheme.surfaceContainerHighest,
+                end ?? scheme.surface,
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 // the _SimpleLineChart widget is a custom widget that displays a line chart based
 // on a list of investments. It uses the fl_chart package to create a line chart
 // that visualizes the invested amount over time. The widget takes a list of
@@ -541,6 +639,7 @@ class _SimpleLineChart extends StatelessWidget {
   final List<Investment> investments;
 
   const _SimpleLineChart({
+    super.key,
     required this.investments,
   }); // the constructor for the
   // _SimpleLineChart widget takes a list of Investment objects as a required parameter,
