@@ -297,6 +297,8 @@ class _DashboardView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
+              _PortfolioInsightsPanel(investments: controller.filtered),
+              const SizedBox(height: AppSpacing.md),
               SizedBox(
                 height: 420,
                 child: Row(
@@ -455,6 +457,244 @@ class _ErrorBanner extends StatelessWidget {
           TextButton(
             onPressed: onRetry,
             child: const Text(AppStrings.genericRetry),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PortfolioInsightsPanel extends StatelessWidget {
+  final List<Investment> investments;
+
+  const _PortfolioInsightsPanel({required this.investments});
+
+  @override
+  Widget build(BuildContext context) {
+    if (investments.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final now = DateTime.now();
+    final startLast30 = now.subtract(const Duration(days: 30));
+    final startPrev30 = now.subtract(const Duration(days: 60));
+
+    final last30Total = investments
+        .where((i) => i.date.isAfter(startLast30))
+        .fold<double>(0, (sum, i) => sum + i.amount.toDouble());
+
+    final prev30Total = investments
+        .where((i) => i.date.isAfter(startPrev30) && i.date.isBefore(startLast30))
+        .fold<double>(0, (sum, i) => sum + i.amount.toDouble());
+
+    final monthlyGrowthPct = prev30Total <= 0
+        ? (last30Total > 0 ? 100.0 : 0.0)
+        : ((last30Total - prev30Total) / prev30Total) * 100;
+
+    final trendLabel = monthlyGrowthPct > 3
+        ? 'Uptrend'
+        : monthlyGrowthPct < -3
+            ? 'Downtrend'
+            : 'Stable';
+
+    final trendColor = monthlyGrowthPct > 3
+        ? Colors.green
+        : monthlyGrowthPct < -3
+            ? Colors.red
+            : Colors.blueGrey;
+
+    final profitLossPct = monthlyGrowthPct * 0.65;
+
+    return Card(
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'Portfolio Insights',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: trendColor.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    trendLabel,
+                    style: TextStyle(color: trendColor, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: _InsightMetricTile(
+                    title: 'Profit / Loss',
+                    value: '${profitLossPct >= 0 ? '+' : ''}${profitLossPct.toStringAsFixed(2)}%',
+                    color: profitLossPct >= 0 ? Colors.green : Colors.red,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _InsightMetricTile(
+                    title: 'Monthly Snapshot',
+                    value: '${monthlyGrowthPct >= 0 ? '+' : ''}${monthlyGrowthPct.toStringAsFixed(2)}%',
+                    color: monthlyGrowthPct >= 0 ? Colors.green : Colors.red,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              height: 180,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: _AssetAllocationPie(investments: investments),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _MonthlyComparisonTile(
+                      last30Total: last30Total,
+                      prev30Total: prev30Total,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InsightMetricTile extends StatelessWidget {
+  final String title;
+  final String value;
+  final Color color;
+
+  const _InsightMetricTile({
+    required this.title,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: color.withValues(alpha: 0.08),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          const SizedBox(height: 6),
+          Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+class _AssetAllocationPie extends StatelessWidget {
+  final List<Investment> investments;
+
+  const _AssetAllocationPie({required this.investments});
+
+  @override
+  Widget build(BuildContext context) {
+    final totals = <String, double>{};
+    for (final inv in investments) {
+      totals[inv.asset] = (totals[inv.asset] ?? 0) + inv.amount.toDouble();
+    }
+    final entries = totals.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final palette = <Color>[
+      Colors.indigo,
+      Colors.teal,
+      Colors.orange,
+      Colors.pink,
+      Colors.deepPurple,
+      Colors.cyan,
+    ];
+
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Asset Allocation', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: AppSpacing.sm),
+            Expanded(
+              child: PieChart(
+                PieChartData(
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 26,
+                  sections: [
+                    for (var i = 0; i < entries.length; i++)
+                      PieChartSectionData(
+                        color: palette[i % palette.length],
+                        value: entries[i].value,
+                        title: entries[i].key,
+                        radius: 44,
+                        titleStyle: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MonthlyComparisonTile extends StatelessWidget {
+  final double last30Total;
+  final double prev30Total;
+
+  const _MonthlyComparisonTile({required this.last30Total, required this.prev30Total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Monthly Performance', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          Text('Last 30d: ${last30Total.toStringAsFixed(2)}'),
+          const SizedBox(height: 6),
+          Text('Prev 30d: ${prev30Total.toStringAsFixed(2)}'),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(
+            value: (prev30Total <= 0 || last30Total <= 0)
+                ? 1
+                : (last30Total / (prev30Total + last30Total)).clamp(0.05, 1),
           ),
         ],
       ),
