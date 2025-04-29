@@ -299,6 +299,8 @@ class _DashboardView extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
               _PortfolioInsightsPanel(investments: controller.filtered),
               const SizedBox(height: AppSpacing.md),
+              _SmartNotificationsPanel(investments: controller.filtered),
+              const SizedBox(height: AppSpacing.md),
               SizedBox(
                 height: 420,
                 child: Row(
@@ -697,6 +699,113 @@ class _MonthlyComparisonTile extends StatelessWidget {
                 : (last30Total / (prev30Total + last30Total)).clamp(0.05, 1),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SmartNotificationsPanel extends StatefulWidget {
+  final List<Investment> investments;
+
+  const _SmartNotificationsPanel({required this.investments});
+
+  @override
+  State<_SmartNotificationsPanel> createState() => _SmartNotificationsPanelState();
+}
+
+class _SmartNotificationsPanelState extends State<_SmartNotificationsPanel> {
+  bool _priceAlerts = true;
+  bool _goalAlerts = true;
+  bool _inactivityNudges = true;
+  bool _milestoneAlerts = true;
+
+  List<String> _buildNotifications() {
+    final list = <String>[];
+    if (widget.investments.isEmpty) return list;
+
+    final total = widget.investments.fold<double>(
+      0,
+      (sum, i) => sum + i.amount.toDouble(),
+    );
+    final maxSingle = widget.investments
+        .map((i) => i.amount.toDouble())
+        .reduce((a, b) => a > b ? a : b);
+    final latestDate = widget.investments
+        .map((i) => i.date)
+        .reduce((a, b) => a.isAfter(b) ? a : b);
+
+    if (_priceAlerts && maxSingle >= 1500) {
+      list.add('Price alert: one asset position crossed 1,500.');
+    }
+    if (_goalAlerts && total >= 5000) {
+      list.add('Goal alert: portfolio crossed the 5,000 milestone.');
+    }
+    if (_inactivityNudges &&
+        DateTime.now().difference(latestDate).inDays >= 14) {
+      list.add('Inactivity nudge: no new investment activity in 14+ days.');
+    }
+    if (_milestoneAlerts && widget.investments.length % 5 == 0) {
+      list.add('Milestone: ${widget.investments.length} total investments logged.');
+    }
+
+    if (list.isEmpty) {
+      list.add('All clear: no active alerts right now.');
+    }
+    return list;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notifications = _buildNotifications();
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Smart Notifications',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilterChip(
+                  label: const Text('Price alerts'),
+                  selected: _priceAlerts,
+                  onSelected: (v) => setState(() => _priceAlerts = v),
+                ),
+                FilterChip(
+                  label: const Text('Goal alerts'),
+                  selected: _goalAlerts,
+                  onSelected: (v) => setState(() => _goalAlerts = v),
+                ),
+                FilterChip(
+                  label: const Text('Inactivity nudges'),
+                  selected: _inactivityNudges,
+                  onSelected: (v) => setState(() => _inactivityNudges = v),
+                ),
+                FilterChip(
+                  label: const Text('Milestones'),
+                  selected: _milestoneAlerts,
+                  onSelected: (v) => setState(() => _milestoneAlerts = v),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ...notifications.map(
+              (n) => ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.notifications_active_outlined),
+                title: Text(n),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
