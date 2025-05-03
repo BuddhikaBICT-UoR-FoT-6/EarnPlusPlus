@@ -260,40 +260,46 @@ class _DashboardView extends StatelessWidget {
                 child: Center(child: Text(AppStrings.emptyInvestments)),
               ),
             if (controller.state == InvestmentLoadState.success) ...[
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    AnimatedCard(
-                      duration: const Duration(milliseconds: 800),
-                      delay: Duration.zero,
-                      child: AnimatedKpiCard(
-                        title: 'Total Invested',
-                        value: controller.totalInvested.toDouble(),
-                        fractionDigits: 2,
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                child: SingleChildScrollView(
+                  key: ValueKey(controller.selectedAsset),
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      AnimatedCard(
+                        duration: const Duration(milliseconds: 800),
+                        delay: Duration.zero,
+                        child: AnimatedKpiCard(
+                          title: 'Total Invested',
+                          value: controller.totalInvested.toDouble(),
+                          fractionDigits: 2,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    AnimatedCard(
-                      duration: const Duration(milliseconds: 800),
-                      delay: const Duration(milliseconds: 150),
-                      child: AnimatedKpiCard(
-                        title: 'Average',
-                        value: controller.averageInvested.toDouble(),
-                        fractionDigits: 2,
+                      const SizedBox(width: AppSpacing.sm),
+                      AnimatedCard(
+                        duration: const Duration(milliseconds: 800),
+                        delay: const Duration(milliseconds: 150),
+                        child: AnimatedKpiCard(
+                          title: 'Average',
+                          value: controller.averageInvested.toDouble(),
+                          fractionDigits: 2,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    AnimatedCard(
-                      duration: const Duration(milliseconds: 800),
-                      delay: const Duration(milliseconds: 300),
-                      child: AnimatedKpiCard(
-                        title: 'Count',
-                        value: controller.filtered.length.toDouble(),
-                        fractionDigits: 0,
+                      const SizedBox(width: AppSpacing.sm),
+                      AnimatedCard(
+                        duration: const Duration(milliseconds: 800),
+                        delay: const Duration(milliseconds: 300),
+                        child: AnimatedKpiCard(
+                          title: 'Count',
+                          value: controller.filtered.length.toDouble(),
+                          fractionDigits: 0,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -827,36 +833,65 @@ class AnimatedKpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.lg,
-            horizontal: AppSpacing.md,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).hintColor,
+      child: _PressableSurface(
+        child: Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.lg,
+              horizontal: AppSpacing.md,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).hintColor,
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              AnimatedCount(
-                value: value,
-                fractionDigits: fractionDigits,
-                textStyle: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: AppSpacing.xs),
+                AnimatedCount(
+                  value: value,
+                  fractionDigits: fractionDigits,
+                  textStyle: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PressableSurface extends StatefulWidget {
+  final Widget child;
+
+  const _PressableSurface({required this.child});
+
+  @override
+  State<_PressableSurface> createState() => _PressableSurfaceState();
+}
+
+class _PressableSurfaceState extends State<_PressableSurface> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 110),
+        scale: _pressed ? 0.98 : 1,
+        child: widget.child,
       ),
     );
   }
@@ -1045,6 +1080,21 @@ class _SimpleLineChart extends StatelessWidget {
             barWidth: 3,
           ),
         ],
+        lineTouchData: LineTouchData(
+          handleBuiltInTouches: true,
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (_) => Theme.of(context).colorScheme.inverseSurface,
+            getTooltipItems: (touchedSpots) {
+              return touchedSpots.map((spot) {
+                final text = spot.y.toStringAsFixed(2);
+                return LineTooltipItem(
+                  'Amount: $text',
+                  TextStyle(color: Theme.of(context).colorScheme.onInverseSurface),
+                );
+              }).toList();
+            },
+          ),
+        ),
       ),
     );
   }
