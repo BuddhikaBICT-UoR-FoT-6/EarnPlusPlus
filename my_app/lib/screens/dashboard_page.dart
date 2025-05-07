@@ -307,6 +307,8 @@ class _DashboardView extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
               _SmartNotificationsPanel(investments: controller.filtered),
               const SizedBox(height: AppSpacing.md),
+              _AuditTimelinePanel(investments: controller.filtered),
+              const SizedBox(height: AppSpacing.md),
               SizedBox(
                 height: 420,
                 child: Row(
@@ -454,12 +456,27 @@ class _ErrorBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
+          const Icon(Icons.error_outline),
+          const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onErrorContainer,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Could not refresh portfolio data',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$message. You can retry now or continue using cached view.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
+                ),
+              ],
             ),
           ),
           TextButton(
@@ -492,7 +509,9 @@ class _PortfolioInsightsPanel extends StatelessWidget {
         .fold<double>(0, (sum, i) => sum + i.amount.toDouble());
 
     final prev30Total = investments
-        .where((i) => i.date.isAfter(startPrev30) && i.date.isBefore(startLast30))
+        .where(
+          (i) => i.date.isAfter(startPrev30) && i.date.isBefore(startLast30),
+        )
         .fold<double>(0, (sum, i) => sum + i.amount.toDouble());
 
     final monthlyGrowthPct = prev30Total <= 0
@@ -502,14 +521,14 @@ class _PortfolioInsightsPanel extends StatelessWidget {
     final trendLabel = monthlyGrowthPct > 3
         ? 'Uptrend'
         : monthlyGrowthPct < -3
-            ? 'Downtrend'
-            : 'Stable';
+        ? 'Downtrend'
+        : 'Stable';
 
     final trendColor = monthlyGrowthPct > 3
         ? Colors.green
         : monthlyGrowthPct < -3
-            ? Colors.red
-            : Colors.blueGrey;
+        ? Colors.red
+        : Colors.blueGrey;
 
     final profitLossPct = monthlyGrowthPct * 0.65;
 
@@ -528,14 +547,20 @@ class _PortfolioInsightsPanel extends StatelessWidget {
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: trendColor.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     trendLabel,
-                    style: TextStyle(color: trendColor, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: trendColor,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -546,7 +571,8 @@ class _PortfolioInsightsPanel extends StatelessWidget {
                 Expanded(
                   child: _InsightMetricTile(
                     title: 'Profit / Loss',
-                    value: '${profitLossPct >= 0 ? '+' : ''}${profitLossPct.toStringAsFixed(2)}%',
+                    value:
+                        '${profitLossPct >= 0 ? '+' : ''}${profitLossPct.toStringAsFixed(2)}%',
                     color: profitLossPct >= 0 ? Colors.green : Colors.red,
                   ),
                 ),
@@ -554,7 +580,8 @@ class _PortfolioInsightsPanel extends StatelessWidget {
                 Expanded(
                   child: _InsightMetricTile(
                     title: 'Monthly Snapshot',
-                    value: '${monthlyGrowthPct >= 0 ? '+' : ''}${monthlyGrowthPct.toStringAsFixed(2)}%',
+                    value:
+                        '${monthlyGrowthPct >= 0 ? '+' : ''}${monthlyGrowthPct.toStringAsFixed(2)}%',
                     color: monthlyGrowthPct >= 0 ? Colors.green : Colors.red,
                   ),
                 ),
@@ -608,9 +635,15 @@ class _InsightMetricTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
+          ),
           const SizedBox(height: 6),
-          Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+          Text(
+            value,
+            style: TextStyle(fontWeight: FontWeight.bold, color: color),
+          ),
         ],
       ),
     );
@@ -628,7 +661,8 @@ class _AssetAllocationPie extends StatelessWidget {
     for (final inv in investments) {
       totals[inv.asset] = (totals[inv.asset] ?? 0) + inv.amount.toDouble();
     }
-    final entries = totals.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final entries = totals.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     final palette = <Color>[
       Colors.indigo,
       Colors.teal,
@@ -645,7 +679,10 @@ class _AssetAllocationPie extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Asset Allocation', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text(
+              'Asset Allocation',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: PieChart(
@@ -680,7 +717,10 @@ class _MonthlyComparisonTile extends StatelessWidget {
   final double last30Total;
   final double prev30Total;
 
-  const _MonthlyComparisonTile({required this.last30Total, required this.prev30Total});
+  const _MonthlyComparisonTile({
+    required this.last30Total,
+    required this.prev30Total,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -693,7 +733,10 @@ class _MonthlyComparisonTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Monthly Performance', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text(
+            'Monthly Performance',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 10),
           Text('Last 30d: ${last30Total.toStringAsFixed(2)}'),
           const SizedBox(height: 6),
@@ -716,7 +759,91 @@ class _SmartNotificationsPanel extends StatefulWidget {
   const _SmartNotificationsPanel({required this.investments});
 
   @override
-  State<_SmartNotificationsPanel> createState() => _SmartNotificationsPanelState();
+  State<_SmartNotificationsPanel> createState() =>
+      _SmartNotificationsPanelState();
+}
+
+class _AuditTimelinePanel extends StatelessWidget {
+  final List<Investment> investments;
+
+  const _AuditTimelinePanel({required this.investments});
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = [...investments]..sort((a, b) => b.date.compareTo(a.date));
+    final recent = sorted.take(6).toList();
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Audit & History Timeline',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Track portfolio changes with transparent, reviewable events.',
+              style: TextStyle(color: Theme.of(context).hintColor),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            if (recent.isEmpty)
+              const Text('No timeline events yet.')
+            else
+              ...recent.asMap().entries.map((entry) {
+                final index = entry.key;
+                final inv = entry.value;
+                final isLast = index == recent.length - 1;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      child: Column(
+                        children: [
+                          const Icon(Icons.fiber_manual_record, size: 12),
+                          if (!isLast)
+                            Container(
+                              width: 2,
+                              height: 34,
+                              color: Theme.of(context).dividerColor,
+                            ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Investment recorded: ${inv.asset}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              '${inv.date.toLocal().toIso8601String().split('T').first} • ${decimalToFixed(inv.amount, fractionDigits: 2)}',
+                              style: TextStyle(
+                                color: Theme.of(context).hintColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _SmartNotificationsPanelState extends State<_SmartNotificationsPanel> {
@@ -751,7 +878,9 @@ class _SmartNotificationsPanelState extends State<_SmartNotificationsPanel> {
       list.add('Inactivity nudge: no new investment activity in 14+ days.');
     }
     if (_milestoneAlerts && widget.investments.length % 5 == 0) {
-      list.add('Milestone: ${widget.investments.length} total investments logged.');
+      list.add(
+        'Milestone: ${widget.investments.length} total investments logged.',
+      );
     }
 
     if (list.isEmpty) {
@@ -836,7 +965,9 @@ class AnimatedKpiCard extends StatelessWidget {
       child: _PressableSurface(
         child: Card(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               vertical: AppSpacing.lg,
@@ -1083,13 +1214,16 @@ class _SimpleLineChart extends StatelessWidget {
         lineTouchData: LineTouchData(
           handleBuiltInTouches: true,
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) => Theme.of(context).colorScheme.inverseSurface,
+            getTooltipColor: (_) =>
+                Theme.of(context).colorScheme.inverseSurface,
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((spot) {
                 final text = spot.y.toStringAsFixed(2);
                 return LineTooltipItem(
                   'Amount: $text',
-                  TextStyle(color: Theme.of(context).colorScheme.onInverseSurface),
+                  TextStyle(
+                    color: Theme.of(context).colorScheme.onInverseSurface,
+                  ),
                 );
               }).toList();
             },
