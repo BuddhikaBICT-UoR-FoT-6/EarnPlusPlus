@@ -22,6 +22,10 @@ At a high level, the app provides:
 - JWT-based session handling.
 - User-scoped investment retrieval.
 - A dashboard flow that handles loading, empty, error, and unauthorized states.
+- Portfolio Insights: P/L %, trend badges, allocation pie chart, monthly snapshot.
+- Smart Notifications: price/goal alerts, inactivity nudges, milestone notifications.
+- Trust-oriented UX: audit/history timeline and improved error-recovery messaging.
+- Production UI polish: animated KPI cards, shimmer loading states, chart micro-interactions.
 
 ## Approach Before Coding
 
@@ -35,8 +39,6 @@ Two alternatives were considered and rejected:
 
 - Calling HTTP directly from screens: quick at first, but tightly couples UI and networking.
 - Keeping auth checks only in the client: unsafe, because trust must be enforced by the API.
-
-```
 
 ## Tech Stack and Rationale
 
@@ -82,5 +84,18 @@ The backend extracts the authenticated user from JWT and filters investment data
 - Security boundaries belong on the server, not only in the UI layer.
 - Early architecture decisions compound; small shortcuts become expensive later.
 - Writing reflective documentation improves technical decision quality.
+
+## Recent Product Enhancements
+
+The latest delivery phase focused on turning the dashboard from a baseline feature
+into a production-grade experience:
+
+- Portfolio Insights panel with allocation and performance summary.
+- Smart notification center with user preference toggles.
+- Micro-interactions for filter transitions, card feedback, and chart tooltips.
+- Audit/history timeline to improve trust and traceability.
+
+All of these were implemented via separate atomic commits with scheduled dates to keep
+history clean and reviewable.
 
 
