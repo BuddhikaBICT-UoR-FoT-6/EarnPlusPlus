@@ -112,12 +112,14 @@ class AnimatedSlideIn extends StatefulWidget {
   final Duration duration;
   final Offset begin;
   final Curve curve;
+  final Duration delay;
 
   const AnimatedSlideIn({
     required this.child,
     this.duration = const Duration(milliseconds: 600),
     this.begin = const Offset(1.0, 0.0),
     this.curve = Curves.easeOut,
+    this.delay = Duration.zero,
     super.key,
   });
 
@@ -140,7 +142,9 @@ class _AnimatedSlideInState extends State<AnimatedSlideIn>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: widget.curve));
 
-    _controller.forward();
+    Future.delayed(widget.delay, () {
+      if (mounted) _controller.forward();
+    });
   }
 
   @override
