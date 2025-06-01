@@ -136,6 +136,37 @@ class AppTheme {
     );
   }
 
+  static ThemeData dark() {
+    const seedColor = AppColors.primaryGradientStart;
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: seedColor,
+      brightness: Brightness.dark,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: const Color(0xFF121212),
+      textTheme: _buildTextThemeDark(colorScheme),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1E1E1E),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+      ),
+      cardTheme: CardThemeData(
+        color: const Color(0xFF1E1E1E),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Color(0xFF1E1E1E),
+        selectedItemColor: AppColors.primaryGradientStart,
+        unselectedItemColor: Colors.grey,
+      ),
+    );
+  }
+
   /// Builds a comprehensive TextTheme using Material 3 text scales.
   /// Ensures consistent typography across the entire application.
   static TextTheme _buildTextTheme(ColorScheme colorScheme) {
@@ -286,6 +317,13 @@ class AppTheme {
       ),
       prefixIconColor: AppColors.textMuted,
       suffixIconColor: AppColors.textMuted,
+    );
+  }
+
+  static TextTheme _buildTextThemeDark(ColorScheme colorScheme) {
+    return _buildTextTheme(colorScheme).apply(
+      bodyColor: Colors.white70,
+      displayColor: Colors.white,
     );
   }
 }
