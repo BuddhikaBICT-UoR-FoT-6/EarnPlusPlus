@@ -2,9 +2,17 @@ import 'package:decimal/decimal.dart'; // for handling decimal values with high
 // precision, which is important for financial calculations
 import 'package:flutter/material.dart'; // importing the Flutter material package
 // components and widgets to use Material Design components and state management features
+import 'package:flutter/foundation.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'dart:convert';
 
+import '../../../config/app_config.dart';
+import '../../../core/utils/investment_helpers.dart';
+import '../data/api_investment_repository.dart';
 import '../data/investment_repository.dart';
-import '../domain/investment.dart';
+import '../domain/investment_repository.dart';
+import '../domain/investment_summary_dto.dart';
+import '../domain/investment_detail_dto.dart';
 
 // defining an enum for different states of investment loading to manage the UI
 // state based on the current status of data fetching and processing. The states
@@ -21,43 +29,41 @@ enum InvestmentLoadState { idle, loading, success, empty, error, unauthorized }
 // the UI. When state changes, it calls notifyListeners() to trigger UI rebuilds.
 class InvestmentController extends ChangeNotifier {
   final InvestmentRepository _repository;
+  WebSocketChannel? _channel;
 
   // The constructor initializes the InvestmentRepository, allowing for dependency
   // injection. If no repository is provided, it creates a default instance of
   // InvestmentRepository. This design allows for easier testing and flexibility
   // in swapping out the data source if needed.
   InvestmentController({InvestmentRepository? repository})
-    : _repository = repository ?? InvestmentRepository();
+    : _repository = repository ?? ApiInvestmentRepository();
 
   InvestmentLoadState _state =
       InvestmentLoadState.idle; // initial state is idle,
   // indicating that no data fetching has started yet
-  List<Investment> _investments =
-      const []; // the list of investments is initialized
-  // as an empty list, and it will be populated with data fetched from the repository
-  // when the load method is called
+  List<InvestmentSummaryDto> _investments = [];
+  bool isMutating = false;
+  String? error;
+  String? actionError;
+  
   String selectedAsset = 'All'; // the selected asset for filtering investments,
   // initialized to 'All' to show all investments by default
-  String? error; // a nullable string to hold any error messages that may occur
-  // during data fetching
-  bool isMutating = false;
-  String? actionError;
 
   InvestmentLoadState get state => _state; // getter for the current load state,
   // which is useful for the UI to determine what to display based on the current
   // state allowing the UI to react to changes in the loading process and show
   // appropriate feedback to the user such as loading indicators, error messages,
   // or the list of investments
-  List<Investment> get investments => _investments; // getter for the list of
+  List<InvestmentSummaryDto> get investments => _investments; // getter for the list of
   // investments, which can be used by the UI to display the fetched investment
   // data to the user. This allows the UI to access the investment data managed
   // by the controller and update the display accordingly when the data changes.
 
   // the filtered getter returns a list of investments based on the selected asset.
   // If the selected asset is 'All', it returns the full list of investments.
-  List<Investment> get filtered => selectedAsset == 'All'
+  List<InvestmentSummaryDto> get filtered => selectedAsset == 'All'
       ? _investments
-      : _investments.where((i) => i.asset == selectedAsset).toList();
+      : _investments.where((i) => i.name == selectedAsset).toList();
 
   // the totalInvested getter calculates the total amount invested by summing the
   // amounts of the filtered investments. It uses the fold method to iterate over
@@ -65,7 +71,7 @@ class InvestmentController extends ChangeNotifier {
   // This provides a precise total investment amount that can be displayed in the
   // UI or used for further calculations.
   Decimal get totalInvested =>
-      filtered.fold(Decimal.zero, (prev, item) => prev + item.amount);
+      filtered.fold(Decimal.zero, (prev, item) => prev + Decimal.parse(item.currentValue.toString()));
 
   // the averageInvested getter calculates the average amount invested by dividing the
   // total invested amount by the number of filtered investments. It checks if
@@ -91,25 +97,22 @@ class InvestmentController extends ChangeNotifier {
     _state = InvestmentLoadState.loading;
     error = null;
     actionError = null;
-    notifyListeners(); // notifies listeners that the state has changed to loading,
-    // allowing the UI to display a loading indicator while the data is being fetched
+    notifyListeners();
 
     try {
       _investments = await _repository.fetchInvestments();
       _state = _investments.isEmpty
           ? InvestmentLoadState.empty
           : InvestmentLoadState.success;
+      _connectWebSocket();
     } on InvestmentUnauthorizedException {
       _state = InvestmentLoadState.unauthorized;
     } catch (e) {
-      error = 'Failed to fetch investments: $e';
+      error = humanizeErrorMessage(e.toString());
       _state = InvestmentLoadState.error;
     }
 
-    notifyListeners(); // notifies listeners that the state has changed,
-    // allowing the UI to update and display the fetched data, or an error message
-    // if the data fetching failed, or to show an empty state if there are no
-    // investments to display
+    notifyListeners();
   }
 
   // the addInvestment method creates a new investment record via the repository
@@ -133,8 +136,17 @@ class InvestmentController extends ChangeNotifier {
         asset: asset,
         amount: amount,
       );
-      _investments = [..._investments, created]
-        ..sort((a, b) => a.date.compareTo(b.date));
+      
+      final summary = InvestmentSummaryDto(
+        id: created.id,
+        name: created.name,
+        currentValue: created.currentValue,
+        plPercent: 0.0,
+        insightTags: [],
+      );
+
+      _investments = [..._investments, summary]
+        ..sort((a, b) => a.id.compareTo(b.id));
       _state = _investments.isEmpty
           ? InvestmentLoadState.empty
           : InvestmentLoadState.success;
@@ -143,7 +155,7 @@ class InvestmentController extends ChangeNotifier {
       _state = InvestmentLoadState.unauthorized;
       return false;
     } catch (e) {
-      actionError = 'Failed to add investment: $e';
+      actionError = humanizeErrorMessage(e.toString());
       return false;
     } finally {
       isMutating = false;
@@ -173,15 +185,24 @@ class InvestmentController extends ChangeNotifier {
         asset: asset,
         amount: amount,
       );
+
+      final summary = InvestmentSummaryDto(
+        id: updated.id,
+        name: updated.name,
+        currentValue: updated.currentValue,
+        plPercent: 0.0,
+        insightTags: [],
+      );
+
       _investments =
-          _investments.map((it) => it.id == id ? updated : it).toList()
-            ..sort((a, b) => a.date.compareTo(b.date));
+          _investments.map((it) => it.id == id ? summary : it).toList()
+            ..sort((a, b) => a.id.compareTo(b.id));
       return true;
     } on InvestmentUnauthorizedException {
       _state = InvestmentLoadState.unauthorized;
       return false;
     } catch (e) {
-      actionError = 'Failed to update investment: $e';
+      actionError = humanizeErrorMessage(e.toString());
       return false;
     } finally {
       isMutating = false;
@@ -210,12 +231,16 @@ class InvestmentController extends ChangeNotifier {
       _state = InvestmentLoadState.unauthorized;
       return false;
     } catch (e) {
-      actionError = 'Failed to delete investment: $e';
+      actionError = humanizeErrorMessage(e.toString());
       return false;
     } finally {
       isMutating = false;
       notifyListeners();
     }
+  }
+
+  Future<InvestmentDetailDto> fetchInvestmentById(int id) async {
+    return await _repository.fetchInvestmentById(id);
   }
 
   // the setAsset method updates the selected asset for filtering investments and
@@ -237,9 +262,51 @@ class InvestmentController extends ChangeNotifier {
   List<String> assets() {
     final set = <String>{'All'};
     for (final i in _investments) {
-      set.add(i.asset);
+      set.add(i.name);
     }
     final list = set.toList()..sort();
-    return list;
+    return list.take(8).toList();
+  }
+
+  void _connectWebSocket() {
+    _channel?.sink.close();
+    try {
+      final wsUrl = AppConfig.baseUrl.replaceFirst('http', 'ws');
+      _channel = WebSocketChannel.connect(Uri.parse('$wsUrl/live'));
+      _channel!.stream.listen(
+        (message) {
+          try {
+            final data = jsonDecode(message);
+            if (data['type'] == 'market_update') {
+              final multiplier = data['multiplier'] as num;
+              _applyMarketMultiplier(multiplier.toDouble());
+            }
+          } catch (_) {}
+        },
+        onError: (_) {},
+        onDone: () {},
+      );
+    } catch (_) {}
+  }
+
+  void _applyMarketMultiplier(double multiplier) {
+    if (_investments.isEmpty) return;
+    final updated = _investments.map((inv) {
+      return InvestmentSummaryDto(
+        id: inv.id,
+        name: inv.name,
+        currentValue: inv.currentValue * multiplier,
+        plPercent: inv.plPercent,
+        insightTags: inv.insightTags,
+      );
+    }).toList();
+    _investments = updated;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _channel?.sink.close();
+    super.dispose();
   }
 }
