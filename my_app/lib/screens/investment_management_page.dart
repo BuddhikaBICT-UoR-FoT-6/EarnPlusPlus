@@ -2,8 +2,11 @@ import 'package:flutter/material.dart'; // Flutter framework for building UI
 import 'package:provider/provider.dart'; // Provider package for state management
 
 import '../core/constants/app_spacing.dart';
-import '../core/utils/decimal_format.dart';
-import '../features/investments/domain/investment.dart';
+import '../core/widgets/animated_widgets.dart';
+import '../core/widgets/investment_detail_card.dart';
+import '../core/widgets/shimmer_block.dart';
+import '../features/investments/domain/investment_summary_dto.dart';
+import '../features/investments/domain/investment_detail_dto.dart';
 import '../features/investments/presentation/investment_controller.dart';
 
 // The InvestmentManagementPage is a stateless widget that displays a list of
@@ -87,57 +90,72 @@ class _InvestmentManagementView extends StatelessWidget {
         child: Column(
           children: [
             if (controller.state == InvestmentLoadState.loading)
-              const LinearProgressIndicator(),
+              const _ManagementLoadingShimmer(),
             if (controller.actionError != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: Text(
-                  controller.actionError!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.error.withValues(alpha: 0.1),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.error,
+                      width: 1,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          controller.actionError!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: controller.investments.isEmpty
                   ? const Center(child: Text('No investments yet'))
-                  : ListView.separated(
+                  : ListView.builder(
                       itemCount: controller.investments.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final inv = controller.investments[index];
-                        return ListTile(
-                          title: Text(inv.asset),
-                          subtitle: Text(
-                            '${inv.date.toIso8601String().split('T').first} • ${decimalToFixed(inv.amount, fractionDigits: 2)}',
-                          ),
-                          trailing: Wrap(
-                            spacing: 4,
-                            children: [
-                              IconButton(
-                                tooltip: 'Edit',
-                                onPressed:
-                                    inv.id == null || controller.isMutating
-                                    ? null
-                                    : () => _openForm(
-                                        context,
-                                        controller: controller,
-                                        existing: inv,
-                                      ),
-                                icon: const Icon(Icons.edit_outlined),
-                              ),
-                              IconButton(
-                                tooltip: 'Delete',
-                                onPressed:
-                                    inv.id == null || controller.isMutating
-                                    ? null
-                                    : () => _confirmDelete(
-                                        context,
-                                        controller: controller,
-                                        id: inv.id!,
-                                      ),
-                                icon: const Icon(Icons.delete_outline),
-                              ),
-                            ],
+                        return AnimatedFadeIn(
+                          delay: Duration(milliseconds: 50 * index),
+                          child: AnimatedSlideIn(
+                            begin: const Offset(0.0, 0.5), // slide up
+                            delay: Duration(milliseconds: 50 * index),
+                            child: InvestmentDetailCard(
+                              investment: inv,
+                              onEdit: inv.id == null || controller.isMutating
+                                  ? null
+                                  : () => _openForm(
+                                      context,
+                                      controller: controller,
+                                      existing: inv,
+                                    ),
+                              onDelete: inv.id == null || controller.isMutating
+                                  ? null
+                                  : () => _confirmDelete(
+                                      context,
+                                      controller: controller,
+                                      id: inv.id!,
+                                    ),
+                            ),
                           ),
                         );
                       },
@@ -182,15 +200,25 @@ class _InvestmentManagementView extends StatelessWidget {
   Future<void> _openForm(
     BuildContext context, {
     required InvestmentController controller,
-    Investment? existing,
+    InvestmentSummaryDto? existing,
   }) async {
+    InvestmentDetailDto? detail;
+    if (existing != null) {
+      // Fetch the detail DTO
+      try {
+        detail = await controller.fetchInvestmentById(existing.id);
+      } catch (e) {
+        // Handle error implicitly
+      }
+    }
+
     // pre-fills controllers when editing an existing record, otherwise starts
     // with empty inputs for a new investment entry.
-    final assetController = TextEditingController(text: existing?.asset ?? '');
+    final assetController = TextEditingController(text: detail?.name ?? '');
     final amountController = TextEditingController(
-      text: existing?.amount.toString() ?? '',
+      text: detail?.currentValue.toString() ?? '',
     );
-    DateTime selectedDate = existing?.date ?? DateTime.now();
+    DateTime selectedDate = detail != null ? DateTime.tryParse(detail.date) ?? DateTime.now() : DateTime.now();
     final formKey = GlobalKey<FormState>();
 
     // this modal returns true only after in-dialog validation succeeds.
@@ -224,11 +252,14 @@ class _InvestmentManagementView extends StatelessWidget {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: const InputDecoration(labelText: 'Amount'),
+                      decoration: const InputDecoration(
+                        labelText: 'Amount (\$)',
+                        helperText: 'Enter investment amount in dollars',
+                      ),
                       validator: (value) {
                         final parsed = double.tryParse((value ?? '').trim());
                         if (parsed == null || parsed <= 0) {
-                          return 'Enter a positive amount';
+                          return 'Please enter an amount greater than \$0';
                         }
                         return null;
                       },
@@ -266,13 +297,44 @@ class _InvestmentManagementView extends StatelessWidget {
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
-                  onPressed: () {
-                    if (!(formKey.currentState?.validate() ?? false)) {
-                      return;
-                    }
-                    Navigator.pop(dialogContext, true);
-                  },
-                  child: const Text('Save'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                  ),
+                  onPressed: controller.isMutating
+                      ? null
+                      : () async {
+                          if (!(formKey.currentState?.validate() ?? false)) {
+                            return;
+                          }
+                          // Save while dialog is open
+                          if (existing == null) {
+                            await controller.addInvestment(
+                              date: selectedDate,
+                              asset: assetController.text.trim(),
+                              amount: amountController.text.trim(),
+                            );
+                          } else if (existing.id != null) {
+                            await controller.updateInvestment(
+                              id: existing.id,
+                              date: selectedDate,
+                              asset: assetController.text.trim(),
+                              amount: amountController.text.trim(),
+                            );
+                          }
+                          if (dialogContext.mounted) {
+                            Navigator.pop(dialogContext, true);
+                          }
+                        },
+                  child: controller.isMutating
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Save'),
                 ),
               ],
             );
@@ -281,32 +343,24 @@ class _InvestmentManagementView extends StatelessWidget {
       },
     );
 
-    // if the user cancels or dismisses the dialog, release controller resources
-    // and skip repository mutations.
-    if (shouldSave != true) {
-      assetController.dispose();
-      amountController.dispose();
-      return;
-    }
-
-    // branch between create and update depending on whether an existing entity
-    // was passed to the form helper.
-    if (existing == null) {
-      await controller.addInvestment(
-        date: selectedDate,
-        asset: assetController.text.trim(),
-        amount: amountController.text.trim(),
-      );
-    } else if (existing.id != null) {
-      await controller.updateInvestment(
-        id: existing.id!,
-        date: selectedDate,
-        asset: assetController.text.trim(),
-        amount: amountController.text.trim(),
-      );
-    }
-
     assetController.dispose();
     amountController.dispose();
+  }
+}
+
+class _ManagementLoadingShimmer extends StatelessWidget {
+  const _ManagementLoadingShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: List.generate(
+        3,
+        (index) => const Padding(
+          padding: EdgeInsets.only(bottom: AppSpacing.sm),
+          child: ShimmerBlock(height: 72, radius: 12),
+        ),
+      ),
+    );
   }
 }
