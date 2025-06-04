@@ -1,18 +1,31 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../main.dart';
 
 import 'package:my_app/core/constants/app_spacing.dart';
 import 'package:my_app/core/constants/app_strings.dart';
 import 'package:my_app/core/utils/decimal_format.dart';
+import 'package:my_app/core/utils/investment_helpers.dart';
 import 'package:my_app/core/widgets/animated_widgets.dart';
-import 'package:my_app/features/investments/domain/investment.dart';
+import 'package:my_app/features/investments/domain/investment_summary_dto.dart';
 import 'package:my_app/features/investments/presentation/investment_controller.dart';
+import 'package:my_app/features/investments/presentation/smart_insight_controller.dart';
+import 'package:my_app/core/widgets/ask_portfolio_card.dart';
 import 'package:my_app/services/auth_service.dart';
+import 'package:my_app/core/widgets/shimmer_block.dart';
 import 'package:my_app/screens/admin_dashboard_page.dart';
 import 'package:my_app/screens/investment_management_page.dart';
+import 'package:my_app/screens/goals_page.dart';
 import 'package:my_app/screens/login_page.dart';
 import 'package:my_app/screens/superadmin_dashboard_page.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:my_app/config/app_config.dart';
+import 'package:my_app/features/notifications/presentation/notification_controller.dart';
+import 'package:my_app/screens/notifications_page.dart';
+import 'package:my_app/screens/leaderboard_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({
@@ -28,14 +41,18 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      // The ChangeNotifierProvider is used to provide an instance of InvestmentController
-      // to the widget tree. This allows the dashboard to manage and display investment
-      // data. The create method initializes the InvestmentController and calls its load
-      // method to fetch the initial data. The child of the provider is the _DashboardView,
-      // which is a separate widget that builds the actual UI of the dashboard based on the
-      // state of the controller.
-      create: (_) => InvestmentController()..load(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => InvestmentController()..load(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SmartInsightController(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => NotificationController()..load(),
+        ),
+      ],
       child: const _DashboardView(),
     );
   }
@@ -79,7 +96,96 @@ class _DashboardView extends StatelessWidget {
     // to different parts of the application and allowing the user to manage their
     // session effectively.
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.dashboardTitle)),
+      appBar: AppBar(
+        title: const Text(AppStrings.dashboardTitle),
+        actions: [
+          IconButton(
+            icon: Icon(
+              context.watch<ThemeController>().themeMode == ThemeMode.light
+                  ? Icons.dark_mode
+                  : Icons.light_mode,
+            ),
+            onPressed: () {
+              context.read<ThemeController>().toggleTheme();
+            },
+          ),
+          Consumer<NotificationController>(
+            builder: (context, notificationController, _) {
+              final unread = notificationController.unreadCount;
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications),
+                    tooltip: 'Notifications',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsPage(),
+                        ),
+                      ).then((_) => notificationController.load());
+                    },
+                  ),
+                  if (unread > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          unread > 9 ? '9+' : unread.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Export CSV',
+            onPressed: () async {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Exporting investments...')),
+              );
+              try {
+                final token = await AuthService().getValidToken();
+                final resp = await http.get(
+                  Uri.parse('${AppConfig.baseUrl}/investments/export/csv'),
+                  headers: {'Authorization': 'Bearer $token'},
+                );
+                if (resp.statusCode == 200) {
+                  final dir = await getApplicationDocumentsDirectory();
+                  final file = File('${dir.path}/investments.csv');
+                  await file.writeAsString(resp.body);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Exported to: ${file.path}')),
+                    );
+                  }
+                } else {
+                  throw Exception('Failed to export');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Export failed: $e')),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
       drawer: Drawer(
         // The Drawer widget provides a navigation menu that slides in from the left side
         // of the screen. It contains a list of ListTile widgets that represent different
@@ -99,7 +205,60 @@ class _DashboardView extends StatelessWidget {
 
             return ListView(
               children: [
-                const DrawerHeader(child: Text('Menu')),
+                FutureBuilder<String?>(
+                  future: AuthService().getCurrentEmail(),
+                  builder: (context, emailSnapshot) {
+                    final email = emailSnapshot.data ?? 'user@earn.local';
+                    return FutureBuilder<List<InvestmentSummaryDto>>(
+                      future:
+                          context
+                              .read<InvestmentController>()
+                              .investments
+                              .isEmpty
+                          ? Future.value(
+                              context.read<InvestmentController>().investments,
+                            )
+                          : Future.value(
+                              context.read<InvestmentController>().investments,
+                            ),
+                      builder: (context, investmentsSnapshot) {
+                        final investments = context
+                            .read<InvestmentController>()
+                            .investments;
+                        final total = investments.fold<double>(
+                          0.0,
+                          (sum, inv) => sum + inv.amount.toDouble(),
+                        );
+                        return DrawerHeader(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Profile',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Email: $email',
+                                style: const TextStyle(fontSize: 12),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Total Invested: ${formatDollar(total)}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
                 ListTile(
                   leading: const Icon(Icons.dashboard),
                   title: const Text('Dashboard'),
@@ -123,6 +282,30 @@ class _DashboardView extends StatelessWidget {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const InvestmentManagementPage(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.track_changes),
+                  title: const Text('Financial Goals'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const GoalsPage(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.leaderboard),
+                  title: const Text('Leaderboard'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const LeaderboardPage(),
                       ),
                     );
                   },
@@ -229,20 +412,47 @@ class _DashboardView extends StatelessWidget {
                   onChanged: (v) => controller.setAsset(v ?? 'All'),
                 ),
                 const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'LIVE',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
                 ElevatedButton.icon(
-                  // The ElevatedButton with an icon is used to trigger a refresh
-                  // of the investment data.
                   onPressed: controller.load,
                   icon: const Icon(Icons.refresh),
                   label: const Text('Refresh'),
                 ),
               ],
             ),
-            const SizedBox(
-              height: AppSpacing.lg,
-            ), // appspacing.lg is used to add
-            // vertical space between the asset filter row and the subsequent
-            // content, improving the visual separation and layout of the dashboard.
+            const SizedBox(height: AppSpacing.lg),
+            const AskPortfolioCard(),
+            const SizedBox(height: AppSpacing.lg),
             if (controller.state == InvestmentLoadState.loading)
               const _DashboardLoadingShimmer(),
             if (controller.state == InvestmentLoadState.error)
@@ -374,7 +584,7 @@ class _DashboardView extends StatelessWidget {
                                       child: ListTile(
                                         dense: true,
                                         title: Text(
-                                          '${inv.asset} - ${decimalToFixed(inv.amount, fractionDigits: 2)}',
+                                          '${inv.asset} - ${formatDollar(inv.amount.toDouble())}',
                                         ),
                                         subtitle: Text(
                                           inv.date
@@ -490,7 +700,7 @@ class _ErrorBanner extends StatelessWidget {
 }
 
 class _PortfolioInsightsPanel extends StatelessWidget {
-  final List<Investment> investments;
+  final List<InvestmentSummaryDto> investments;
 
   const _PortfolioInsightsPanel({required this.investments});
 
@@ -500,23 +710,10 @@ class _PortfolioInsightsPanel extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final now = DateTime.now();
-    final startLast30 = now.subtract(const Duration(days: 30));
-    final startPrev30 = now.subtract(const Duration(days: 60));
+    final last30Total = investments.fold<double>(0, (sum, i) => sum + i.currentValue);
+    final prev30Total = 0.0; // Mocked for now, as calculation moved to backend
 
-    final last30Total = investments
-        .where((i) => i.date.isAfter(startLast30))
-        .fold<double>(0, (sum, i) => sum + i.amount.toDouble());
-
-    final prev30Total = investments
-        .where(
-          (i) => i.date.isAfter(startPrev30) && i.date.isBefore(startLast30),
-        )
-        .fold<double>(0, (sum, i) => sum + i.amount.toDouble());
-
-    final monthlyGrowthPct = prev30Total <= 0
-        ? (last30Total > 0 ? 100.0 : 0.0)
-        : ((last30Total - prev30Total) / prev30Total) * 100;
+    final monthlyGrowthPct = investments.isEmpty ? 0.0 : investments.first.plPercent;
 
     final trendLabel = monthlyGrowthPct > 3
         ? 'Uptrend'
@@ -530,7 +727,7 @@ class _PortfolioInsightsPanel extends StatelessWidget {
         ? Colors.red
         : Colors.blueGrey;
 
-    final profitLossPct = monthlyGrowthPct * 0.65;
+    final profitLossPct = monthlyGrowthPct;
 
     return Card(
       elevation: 3,
@@ -659,7 +856,7 @@ class _AssetAllocationPie extends StatelessWidget {
   Widget build(BuildContext context) {
     final totals = <String, double>{};
     for (final inv in investments) {
-      totals[inv.asset] = (totals[inv.asset] ?? 0) + inv.amount.toDouble();
+      totals[inv.name] = (totals[inv.name] ?? 0) + inv.currentValue;
     }
     final entries = totals.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -754,7 +951,7 @@ class _MonthlyComparisonTile extends StatelessWidget {
 }
 
 class _SmartNotificationsPanel extends StatefulWidget {
-  final List<Investment> investments;
+  final List<InvestmentSummaryDto> investments;
 
   const _SmartNotificationsPanel({required this.investments});
 
@@ -764,14 +961,13 @@ class _SmartNotificationsPanel extends StatefulWidget {
 }
 
 class _AuditTimelinePanel extends StatelessWidget {
-  final List<Investment> investments;
+  final List<InvestmentSummaryDto> investments;
 
   const _AuditTimelinePanel({required this.investments});
 
   @override
   Widget build(BuildContext context) {
-    final sorted = [...investments]..sort((a, b) => b.date.compareTo(a.date));
-    final recent = sorted.take(6).toList();
+    final recent = investments.take(6).toList();
 
     return Card(
       elevation: 2,
@@ -821,13 +1017,13 @@ class _AuditTimelinePanel extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Investment recorded: ${inv.asset}',
+                              'Investment recorded: ${inv.name}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             Text(
-                              '${inv.date.toLocal().toIso8601String().split('T').first} • ${decimalToFixed(inv.amount, fractionDigits: 2)}',
+                              '${decimalToFixed(Decimal.parse(inv.currentValue.toString()), fractionDigits: 2)}',
                               style: TextStyle(
                                 color: Theme.of(context).hintColor,
                               ),
@@ -858,24 +1054,17 @@ class _SmartNotificationsPanelState extends State<_SmartNotificationsPanel> {
 
     final total = widget.investments.fold<double>(
       0,
-      (sum, i) => sum + i.amount.toDouble(),
+      (sum, i) => sum + i.currentValue,
     );
     final maxSingle = widget.investments
-        .map((i) => i.amount.toDouble())
+        .map((i) => i.currentValue)
         .reduce((a, b) => a > b ? a : b);
-    final latestDate = widget.investments
-        .map((i) => i.date)
-        .reduce((a, b) => a.isAfter(b) ? a : b);
 
     if (_priceAlerts && maxSingle >= 1500) {
       list.add('Price alert: one asset position crossed 1,500.');
     }
     if (_goalAlerts && total >= 5000) {
       list.add('Goal alert: portfolio crossed the 5,000 milestone.');
-    }
-    if (_inactivityNudges &&
-        DateTime.now().difference(latestDate).inDays >= 14) {
-      list.add('Inactivity nudge: no new investment activity in 14+ days.');
     }
     if (_milestoneAlerts && widget.investments.length % 5 == 0) {
       list.add(
@@ -1062,85 +1251,20 @@ class _DashboardLoadingShimmer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: const [
-        _ShimmerBlock(height: 4, radius: 2),
+        ShimmerBlock(height: 4, radius: 2),
         SizedBox(height: AppSpacing.md),
         Row(
           children: [
-            Expanded(child: _ShimmerBlock(height: 84, radius: 12)),
+            Expanded(child: ShimmerBlock(height: 84, radius: 12)),
             SizedBox(width: AppSpacing.sm),
-            Expanded(child: _ShimmerBlock(height: 84, radius: 12)),
+            Expanded(child: ShimmerBlock(height: 84, radius: 12)),
             SizedBox(width: AppSpacing.sm),
-            Expanded(child: _ShimmerBlock(height: 84, radius: 12)),
+            Expanded(child: ShimmerBlock(height: 84, radius: 12)),
           ],
         ),
         SizedBox(height: AppSpacing.md),
-        _ShimmerBlock(height: 260, radius: 12),
+        ShimmerBlock(height: 260, radius: 12),
       ],
-    );
-  }
-}
-
-class _ShimmerBlock extends StatefulWidget {
-  final double height;
-  final double radius;
-
-  const _ShimmerBlock({required this.height, this.radius = 10});
-
-  @override
-  State<_ShimmerBlock> createState() => _ShimmerBlockState();
-}
-
-class _ShimmerBlockState extends State<_ShimmerBlock>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final t = _controller.value;
-        final start = Color.lerp(
-          scheme.surfaceContainerHighest,
-          scheme.surface,
-          0.4 + (t * 0.2),
-        );
-        final end = Color.lerp(
-          scheme.surfaceContainerHighest,
-          scheme.surface,
-          0.6 + (t * 0.2),
-        );
-        return Container(
-          height: widget.height,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.radius),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                start ?? scheme.surfaceContainerHighest,
-                end ?? scheme.surface,
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }
