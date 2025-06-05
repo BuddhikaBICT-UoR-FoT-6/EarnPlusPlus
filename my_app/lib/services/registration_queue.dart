@@ -44,6 +44,17 @@ class PendingRegistration {
 /// Local SQLite database for managing pending registrations queued for retry.
 class RegistrationDb {
   static Database? _db;
+  static const String _pendingRegistrationsTable = 'pending_registrations';
+
+  static const String _createPendingRegistrationsTableSql = '''
+        CREATE TABLE IF NOT EXISTS pending_registrations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT NOT NULL,
+          password_key TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          status TEXT NOT NULL
+        )
+      ''';
 
   static Future<Database> get instance async {
     if (_db != null) return _db!;
@@ -53,29 +64,30 @@ class RegistrationDb {
       path,
       version: 1,
       onCreate: (db, v) async {
-        await db.execute('''
-        CREATE TABLE pending_registrations (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          email TEXT NOT NULL,
-          password_key TEXT NOT NULL,
-          created_at TEXT NOT NULL,
-          status TEXT NOT NULL
-        )
-      ''');
+        await db.execute(_createPendingRegistrationsTableSql);
+      },
+      onOpen: (db) async {
+        // Ensures required tables exist even if DB file already existed.
+        await db.execute(_createPendingRegistrationsTableSql);
       },
     );
     return _db!;
   }
 
+  static Future<void> initializeAtAppLaunch() async {
+    final db = await instance;
+    await db.execute(_createPendingRegistrationsTableSql);
+  }
+
   static Future<int> insertPending(PendingRegistration p) async {
     final db = await instance;
-    return await db.insert('pending_registrations', p.toMap());
+    return await db.insert(_pendingRegistrationsTable, p.toMap());
   }
 
   static Future<List<PendingRegistration>> getQueued() async {
     final db = await instance;
     final rows = await db.query(
-      'pending_registrations',
+      _pendingRegistrationsTable,
       where: 'status = ?',
       whereArgs: ['queued'],
       orderBy: 'created_at ASC',
@@ -86,7 +98,7 @@ class RegistrationDb {
   static Future<void> updateStatus(int id, String status) async {
     final db = await instance;
     await db.update(
-      'pending_registrations',
+      _pendingRegistrationsTable,
       {'status': status},
       where: 'id = ?',
       whereArgs: [id],
@@ -95,7 +107,11 @@ class RegistrationDb {
 
   static Future<void> delete(int id) async {
     final db = await instance;
-    await db.delete('pending_registrations', where: 'id = ?', whereArgs: [id]);
+    await db.delete(
+      _pendingRegistrationsTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   static Future<void> close() async {
@@ -140,8 +156,8 @@ class RegistrationQueueService {
       status: 'queued',
     );
     await RegistrationDb.insertPending(p);
-    // Try flush in case online
-    await _flushQueueIfOnline();
+    // Try flush in background so registration UI is not blocked on network timeout.
+    unawaited(_flushQueueIfOnline());
   }
 
   /// Check connectivity and attempt to send all queued registrations if online.
