@@ -29,16 +29,18 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final resp = await http.post(
-      Uri.parse('${AppConfig.baseUrl}/auth/register/send-otp'),
-      headers: const {
-        'Content-Type': 'application/json',
-      }, // tell server the data being sent is in json format
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }), // converts the Map of user credentials into a raw json string
-    );
+    final resp = await http
+        .post(
+          Uri.parse('${AppConfig.baseUrl}/auth/register/send-otp'),
+          headers: const {
+            'Content-Type': 'application/json',
+          }, // tell server the data being sent is in json format
+          body: jsonEncode({
+            'email': email,
+            'password': password,
+          }), // converts the Map of user credentials into a raw json string
+        )
+        .timeout(const Duration(seconds: 8));
 
     if (resp.statusCode != 202) {
       throw Exception(_extractMessage(resp.body));
@@ -50,11 +52,13 @@ class AuthService {
     required String email,
     required String otp,
   }) async {
-    final resp = await http.post(
-      Uri.parse('${AppConfig.baseUrl}/auth/register/verify'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'otp': otp}),
-    );
+    final resp = await http
+        .post(
+          Uri.parse('${AppConfig.baseUrl}/auth/register/verify'),
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email, 'otp': otp}),
+        )
+        .timeout(const Duration(seconds: 8));
 
     if (resp.statusCode != 201) {
       throw Exception(_extractMessage(resp.body));
@@ -139,6 +143,33 @@ class AuthService {
       return role;
     }
     return 'user';
+  }
+
+  Future<String?> getCurrentEmail() async {
+    final token = await getValidToken();
+    if (token == null) {
+      return null;
+    }
+
+    final payload = _decodePayload(token);
+    return (payload?['email'] ?? '').toString();
+  }
+
+  Future<int?> getCurrentUserId() async {
+    final token = await getValidToken();
+    if (token == null) {
+      return null;
+    }
+
+    final payload = _decodePayload(token);
+    final sub = payload?['sub'];
+    if (sub is int) {
+      return sub;
+    }
+    if (sub is String) {
+      return int.tryParse(sub);
+    }
+    return null;
   }
 
   // deletes the token from the phone
