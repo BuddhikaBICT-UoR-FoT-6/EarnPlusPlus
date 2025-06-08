@@ -17,35 +17,7 @@ Response _json(int statusCode, Object body) => Response(
       headers: {'Content-Type': 'application/json'},
     );
 
-/// Fetches all investments from the database and returns them as a list of maps
-/// with date, asset, and amount fields
-Future<List<Map<String, dynamic>>> _fetchInvestments(
-  MySqlConnection conn,
-  String dbName,
-  int userId,
-) async {
-  // Select the database to query
-  await conn.query('USE $dbName');
 
-  // Query all investments ordered by date and id
-  final results = await conn.query(
-    'SELECT id, date, asset, amount FROM investments WHERE user_id = ? ORDER BY date ASC, id ASC',
-    [userId],
-  );
-
-  // Transform database rows into a list of maps with formatted data
-  return results
-      .map((row) => {
-            'id': row['id'] as int,
-            // Convert DateTime to ISO8601 string and extract only the date part
-            'date':
-                (row['date'] as DateTime).toIso8601String().split('T').first,
-            'asset': row['asset'] as String,
-            // Ensure amount is stored as a double
-            'amount': (row['amount'] as num).toDouble(),
-          })
-      .toList();
-}
 
 // the _readJson helper function standardizes request body parsing across all
 // mutation endpoints. It reads the raw request body, decodes it as JSON, and
@@ -146,13 +118,13 @@ int? _extractUserId(Request req, String jwtSecret) {
   }
 }
 
+import '../domain/investment_repository.dart';
+import '../domain/investment_dtos.dart';
+import '../services/market_data_service.dart';
+
 /// Creates and configures the investment routes router
-Router investmentRoutes(MySqlConnection conn, ServerConfig config) {
-  final router =
-      Router(); // the investmentRoutes function takes a MySqlConnection
-  // and returns a Router object that handles investment-related routes
-  // the Router object is used to define routes for the investment API endpoints
-  // and a ServerConfig as parameters,
+Router investmentRoutes(InvestmentRepository repository, ServerConfig config, MarketDataService marketDataService) {
+  final router = Router();
 
   /// GET /investments - Retrieves all investments from the database
   router.get('/investments', (Request req) async {
@@ -161,8 +133,88 @@ Router investmentRoutes(MySqlConnection conn, ServerConfig config) {
       return _json(401, {'message': 'Unauthorized'});
     }
 
-    final list = await _fetchInvestments(conn, config.dbName, userId);
-    return _json(200, list);
+    final list = await repository.fetchInvestments(userId);
+    
+    // Get unique assets
+    final assets = list.map((item) => item['asset'] as String).toSet();
+    final multipliers = marketDataService.fetchLiveMultipliers(assets);
+
+    final dtos = list.map((item) {
+      final initialAmount = (item['amount'] as num).toDouble();
+      final assetName = item['asset'] as String;
+      final multiplier = multipliers[assetName] ?? 1.0;
+      final currentValue = initialAmount * multiplier;
+      final plPercent = ((currentValue - initialAmount) / initialAmount) * 100;
+
+      return InvestmentSummaryDto(
+        id: item['id'] as int,
+        name: assetName,
+        currentValue: currentValue,
+        plPercent: plPercent,
+        insightTags: [], // Will be hydrated later
+      ).toJson();
+    }).toList();
+    return _json(200, dtos);
+  });
+
+  /// GET /investments/export/csv - Export all investments as CSV
+  router.get('/investments/export/csv', (Request req) async {
+    final userId = _extractUserId(req, config.jwtSecret);
+    if (userId == null) {
+      return _json(401, {'message': 'Unauthorized'});
+    }
+
+    final list = await repository.fetchInvestments(userId);
+    final buffer = StringBuffer();
+    
+    // CSV Header
+    buffer.writeln('ID,Date,Asset,InitialAmount');
+    
+    for (var item in list) {
+      final id = item['id'];
+      final date = item['date'];
+      final asset = item['asset'];
+      final amount = item['amount'];
+      buffer.writeln('$id,$date,$asset,$amount');
+    }
+
+    return Response.ok(
+      buffer.toString(),
+      headers: {
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename="investments.csv"'
+      },
+    );
+  });
+
+  /// GET /investments/<id> - Retrieves a single investment detail
+  router.get('/investments/<id>', (Request req, String id) async {
+    final userId = _extractUserId(req, config.jwtSecret);
+    if (userId == null) {
+      return _json(401, {'message': 'Unauthorized'});
+    }
+
+    final investmentId = int.tryParse(id);
+    if (investmentId == null) {
+      return _json(400, {'message': 'Invalid investment id'});
+    }
+
+    try {
+      final row = await repository.getInvestmentById(investmentId, userId);
+      if (row == null) {
+        return _json(404, {'message': 'Investment not found'});
+      }
+      
+      final dto = InvestmentDetailDto(
+        id: row['id'] as int,
+        date: row['date'].toString(),
+        name: row['asset'] as String,
+        currentValue: (row['amount'] as num).toDouble(),
+      );
+      return _json(200, dto.toJson());
+    } catch (e) {
+      return _json(500, {'message': 'Internal Server Error'});
+    }
   });
 
   // the POST /investments endpoint creates a new investment record for the
@@ -182,14 +234,17 @@ Router investmentRoutes(MySqlConnection conn, ServerConfig config) {
       final asset = _parseAsset(payload['asset']);
       final amount = _parseAmount(payload['amount']);
 
-      await conn.query('USE ${config.dbName}');
-      await conn.query(
-        'INSERT INTO investments (user_id, date, asset, amount) VALUES (?, ?, ?, ?)',
-        [userId, date, asset, amount],
-      );
+      await repository.createInvestment(userId, date, asset, amount);
 
-      final list = await _fetchInvestments(conn, config.dbName, userId);
-      return _json(201, list.last);
+      final list = await repository.fetchInvestments(userId);
+      final lastItem = list.last;
+      final dto = InvestmentDetailDto(
+        id: lastItem['id'] as int,
+        date: lastItem['date'].toString(),
+        name: lastItem['asset'] as String,
+        currentValue: (lastItem['amount'] as num).toDouble(),
+      );
+      return _json(201, dto.toJson());
     } on FormatException catch (e) {
       return _json(400, {'message': e.message});
     } catch (e) {
@@ -219,28 +274,24 @@ Router investmentRoutes(MySqlConnection conn, ServerConfig config) {
       final asset = _parseAsset(payload['asset']);
       final amount = _parseAmount(payload['amount']);
 
-      await conn.query('USE ${config.dbName}');
-      final result = await conn.query(
-        'UPDATE investments SET date = ?, asset = ?, amount = ? WHERE id = ? AND user_id = ?',
-        [date, asset, amount, investmentId, userId],
-      );
+      final affectedRows = await repository.updateInvestment(investmentId, userId, date, asset, amount);
 
-      if (result.affectedRows == 0) {
+      if (affectedRows == 0) {
         return _json(404, {'message': 'Investment not found'});
       }
 
-      final rows = await conn.query(
-        'SELECT id, date, asset, amount FROM investments WHERE id = ? AND user_id = ? LIMIT 1',
-        [investmentId, userId],
+      final row = await repository.getInvestmentById(investmentId, userId);
+      if (row == null) {
+        return _json(404, {'message': 'Investment not found'});
+      }
+      
+      final dto = InvestmentDetailDto(
+        id: row['id'] as int,
+        date: row['date'].toString(),
+        name: row['asset'] as String,
+        currentValue: (row['amount'] as num).toDouble(),
       );
-
-      final row = rows.first;
-      return _json(200, {
-        'id': row['id'] as int,
-        'date': (row['date'] as DateTime).toIso8601String().split('T').first,
-        'asset': row['asset'] as String,
-        'amount': (row['amount'] as num).toDouble(),
-      });
+      return _json(200, dto.toJson());
     } on FormatException catch (e) {
       return _json(400, {'message': e.message});
     } catch (e) {
@@ -265,13 +316,9 @@ Router investmentRoutes(MySqlConnection conn, ServerConfig config) {
       return _json(400, {'message': 'Invalid investment id'});
     }
 
-    await conn.query('USE ${config.dbName}');
-    final result = await conn.query(
-      'DELETE FROM investments WHERE id = ? AND user_id = ?',
-      [investmentId, userId],
-    );
+    final affectedRows = await repository.deleteInvestment(investmentId, userId);
 
-    if (result.affectedRows == 0) {
+    if (affectedRows == 0) {
       return _json(404, {'message': 'Investment not found'});
     }
 
