@@ -44,19 +44,35 @@ Future<void> ensureSchema(MySqlConnection conn,
     )
   ''');
 
-  // Backward-compatible migration for existing DBs created before user_id existed.
   await conn.query('''
-    ALTER TABLE investments
-    ADD COLUMN IF NOT EXISTS user_id INT NOT NULL DEFAULT 0
+    CREATE TABLE IF NOT EXISTS goals (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      title VARCHAR(120) NOT NULL,
+      target_amount DOUBLE NOT NULL,
+      current_amount DOUBLE NOT NULL DEFAULT 0.0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
   ''');
 
   await conn.query('''
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS role VARCHAR(24) NOT NULL DEFAULT 'user'
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      body TEXT NOT NULL,
+      is_read TINYINT(1) NOT NULL DEFAULT 0,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
   ''');
 
   await conn.query('''
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS token_version INT NOT NULL DEFAULT 0
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      token VARCHAR(255) NOT NULL UNIQUE,
+      expires_at DATETIME NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
   ''');
 }
