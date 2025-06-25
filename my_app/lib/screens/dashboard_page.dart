@@ -5,7 +5,6 @@ import '../main.dart';
 
 import 'package:my_app/core/constants/app_spacing.dart';
 import 'package:my_app/core/constants/app_strings.dart';
-import 'package:my_app/core/utils/decimal_format.dart';
 import 'package:my_app/core/utils/investment_helpers.dart';
 import 'package:my_app/core/widgets/animated_widgets.dart';
 import 'package:my_app/features/investments/domain/investment_summary_dto.dart';
