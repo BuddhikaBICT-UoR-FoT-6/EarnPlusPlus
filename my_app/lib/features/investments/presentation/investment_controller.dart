@@ -12,7 +12,6 @@ import '../data/investment_repository.dart';
 import '../domain/investment_repository.dart';
 import '../domain/investment_summary_dto.dart';
 import '../domain/investment_detail_dto.dart';
-import '../domain/investment_detail_dto.dart';
 
 // defining an enum for different states of investment loading to manage the UI
 // state based on the current status of data fetching and processing. The states
