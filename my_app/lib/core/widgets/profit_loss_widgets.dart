@@ -54,9 +54,9 @@ class ProfitLossIndicator extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isGain
-            ? Colors.green.withOpacity(0.1)
-            : Colors.red.withOpacity(0.1),
-        border: Border.all(color: textColor.withOpacity(0.3), width: 1),
+            ? Colors.green.withValues(alpha: 0.1)
+            : Colors.red.withValues(alpha: 0.1),
+        border: Border.all(color: textColor.withValues(alpha: 0.3), width: 1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -139,7 +139,7 @@ class PerformanceBar extends StatelessWidget {
                 child: Stack(
                   children: [
                     // Background bar
-                    Container(height: 24, color: Colors.grey.withOpacity(0.2)),
+                    Container(height: 24, color: Colors.grey.withValues(alpha: 0.2)),
                     // Foreground bar (gain/loss)
                     if (isGain)
                       Align(
@@ -150,7 +150,7 @@ class PerformanceBar extends StatelessWidget {
                               MediaQuery.of(context).size.width *
                               clampedPercent.abs() *
                               0.5, // Adjust multiplier for visualization
-                          color: barColor.withOpacity(0.7),
+                          color: barColor.withValues(alpha: 0.7),
                         ),
                       )
                     else
@@ -162,7 +162,7 @@ class PerformanceBar extends StatelessWidget {
                               MediaQuery.of(context).size.width *
                               clampedPercent.abs() *
                               0.5,
-                          color: barColor.withOpacity(0.7),
+                          color: barColor.withValues(alpha: 0.7),
                         ),
                       ),
                     // Neutral line (center)
@@ -171,7 +171,7 @@ class PerformanceBar extends StatelessWidget {
                       child: SizedBox(
                         height: 24,
                         child: VerticalDivider(
-                          color: Colors.grey.withOpacity(0.5),
+                          color: Colors.grey.withValues(alpha: 0.5),
                           thickness: 1,
                         ),
                       ),
