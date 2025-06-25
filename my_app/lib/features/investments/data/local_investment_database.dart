@@ -25,12 +25,10 @@ class LocalInvestmentDatabase {
         await db.execute('''
           CREATE TABLE investments_cache (
             id INTEGER PRIMARY KEY,
-            user_id INTEGER NOT NULL,
-            asset_name TEXT NOT NULL,
-            amount REAL NOT NULL,
-            date TEXT NOT NULL,
-            risk_level TEXT NOT NULL,
-            category TEXT NOT NULL
+            name TEXT NOT NULL,
+            currentValue REAL NOT NULL,
+            plPercent REAL NOT NULL,
+            insightTags TEXT NOT NULL
           )
         ''');
       },
@@ -44,12 +42,10 @@ class LocalInvestmentDatabase {
       for (final inv in investments) {
         await txn.insert('investments_cache', {
           'id': inv.id,
-          'user_id': inv.userId,
-          'asset_name': inv.assetName,
-          'amount': inv.amount,
-          'date': inv.date,
-          'risk_level': inv.riskLevel,
-          'category': inv.category,
+          'name': inv.name,
+          'currentValue': inv.currentValue,
+          'plPercent': inv.plPercent,
+          'insightTags': inv.insightTags.join(','),
         });
       }
     });
@@ -62,12 +58,10 @@ class LocalInvestmentDatabase {
     return maps.map((map) {
       return InvestmentSummaryDto(
         id: map['id'] as int,
-        userId: map['user_id'] as int,
-        assetName: map['asset_name'] as String,
-        amount: map['amount'] as double,
-        date: map['date'] as String,
-        riskLevel: map['risk_level'] as String,
-        category: map['category'] as String,
+        name: map['name'] as String,
+        currentValue: map['currentValue'] as double,
+        plPercent: map['plPercent'] as double,
+        insightTags: (map['insightTags'] as String).split(',').where((s) => s.isNotEmpty).toList(),
       );
     }).toList();
   }
