@@ -14,6 +14,6 @@ void main() {
     expect(find.text('Login'), findsWidgets);
     
     // Verify that the Register text is present.
-    expect(find.text('Don\\'t have an account? Register'), findsOneWidget);
+    expect(find.text("Don't have an account? Register"), findsOneWidget);
   });
 }
