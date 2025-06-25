@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_app/features/investments/domain/investment_repository.dart';
+import 'package:my_app/features/investments/data/investment_repository.dart'; // For exceptions
 import 'package:my_app/features/investments/domain/investment_summary_dto.dart';
 import 'package:my_app/features/investments/domain/investment_detail_dto.dart';
 import 'package:my_app/features/investments/presentation/investment_controller.dart';
@@ -42,13 +43,9 @@ class _FakeRepository implements InvestmentRepository {
     return created ??
         InvestmentDetailDto(
           id: 99,
-          userId: 1,
-          assetName: asset,
-          amount: double.parse(amount),
+          name: asset,
+          currentValue: double.parse(amount),
           date: date.toIso8601String(),
-          riskLevel: 'Low',
-          category: 'Stock',
-          plPercent: 0,
         );
   }
 
@@ -68,13 +65,9 @@ class _FakeRepository implements InvestmentRepository {
     return updated ??
         InvestmentDetailDto(
           id: id,
-          userId: 1,
-          assetName: asset,
-          amount: double.parse(amount),
+          name: asset,
+          currentValue: double.parse(amount),
           date: date.toIso8601String(),
-          riskLevel: 'Low',
-          category: 'Stock',
-          plPercent: 0,
         );
   }
 
@@ -89,8 +82,13 @@ class _FakeRepository implements InvestmentRepository {
   }
 
   @override
-  Future<InvestmentDetailDto> getInvestmentDetails(int id) async {
-    return created!;
+  Future<InvestmentDetailDto> fetchInvestmentById(int id) async {
+    return created ?? InvestmentDetailDto(
+      id: id,
+      name: 'Default',
+      currentValue: 0.0,
+      date: DateTime.now().toIso8601String(),
+    );
   }
 }
 
@@ -148,13 +146,9 @@ void main() {
         ],
         created: InvestmentDetailDto(
           id: 1,
-          userId: 1,
-          assetName: 'MSFT',
-          amount: 20.0,
+          name: 'MSFT',
+          currentValue: 20.0,
           date: DateTime(2025, 2, 3).toIso8601String(),
-          riskLevel: 'Low',
-          category: 'Stock',
-          plPercent: 0,
         ),
       ),
     );
@@ -181,13 +175,9 @@ void main() {
     );
     final updated = InvestmentDetailDto(
       id: 7,
-      userId: 1,
-      assetName: 'AAPL',
-      amount: 11.0,
+      name: 'AAPL',
+      currentValue: 11.0,
       date: DateTime(2025, 2, 1).toIso8601String(),
-      riskLevel: 'Low',
-      category: 'Stock',
-      plPercent: 0,
     );
 
     final controller = InvestmentController(

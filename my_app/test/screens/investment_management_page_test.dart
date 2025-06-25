@@ -45,7 +45,7 @@ class _FakeInvestmentRepository implements InvestmentRepository {
   }
 
   @override
-  Future<InvestmentDetailDto> getInvestmentDetails(int id) async {
+  Future<InvestmentDetailDto> fetchInvestmentById(int id) async {
     throw UnimplementedError();
   }
 }
