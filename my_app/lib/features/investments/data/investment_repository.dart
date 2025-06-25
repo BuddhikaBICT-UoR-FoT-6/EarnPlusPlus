@@ -78,19 +78,19 @@ class ApiInvestmentRepository implements InvestmentRepository {
       rethrow;
     } on InvestmentApiException {
       rethrow;
-    } on SocketException catch (e) {
+    } on SocketException catch (_) {
       final cached = await _localDb.getCachedInvestments();
       if (cached.isNotEmpty) return cached;
       throw InvestmentApiException(
         'No internet connection. Please check your network and try again.',
       );
-    } on TimeoutException catch (e) {
+    } on TimeoutException catch (_) {
       final cached = await _localDb.getCachedInvestments();
       if (cached.isNotEmpty) return cached;
       throw InvestmentApiException(
         'Connection timeout. The server is taking too long to respond. Please try again.',
       );
-    } catch (e) {
+    } catch (_) {
       if (e.toString().contains('Failed host lookup') ||
           e.toString().contains('Connection refused')) {
         throw InvestmentApiException(
@@ -136,15 +136,15 @@ class ApiInvestmentRepository implements InvestmentRepository {
       rethrow;
     } on InvestmentApiException {
       rethrow;
-    } on SocketException catch (e) {
+    } on SocketException catch (_) {
       throw InvestmentApiException(
         'No internet connection. Please check your network and try again.',
       );
-    } on TimeoutException catch (e) {
+    } on TimeoutException catch (_) {
       throw InvestmentApiException(
         'Connection timeout. The server is taking too long to respond. Please try again.',
       );
-    } catch (e) {
+    } catch (_) {
       throw InvestmentApiException('Network error: ${e.toString()}');
     }
   }
@@ -193,7 +193,7 @@ class ApiInvestmentRepository implements InvestmentRepository {
           throw InvestmentApiException(
             message ?? 'Please check your input and try again',
           );
-        } catch (e) {
+        } catch (_) {
           throw InvestmentApiException(
             'Validation error: Please check your input',
           );
@@ -211,15 +211,15 @@ class ApiInvestmentRepository implements InvestmentRepository {
       rethrow;
     } on InvestmentApiException {
       rethrow;
-    } on SocketException catch (e) {
+    } on SocketException catch (_) {
       throw InvestmentApiException(
         'No internet connection. Please check your network and try again.',
       );
-    } on TimeoutException catch (e) {
+    } on TimeoutException catch (_) {
       throw InvestmentApiException(
         'Connection timeout. The server is taking too long to respond. Please try again.',
       );
-    } catch (e) {
+    } catch (_) {
       // Catch any other network or parsing errors
       if (e.toString().contains('Failed host lookup') ||
           e.toString().contains('Connection refused')) {
@@ -277,7 +277,7 @@ class ApiInvestmentRepository implements InvestmentRepository {
           throw InvestmentApiException(
             message ?? 'Please check your input and try again',
           );
-        } catch (e) {
+        } catch (_) {
           throw InvestmentApiException(
             'Validation error: Please check your input',
           );
@@ -301,15 +301,15 @@ class ApiInvestmentRepository implements InvestmentRepository {
       rethrow;
     } on InvestmentApiException {
       rethrow;
-    } on SocketException catch (e) {
+    } on SocketException catch (_) {
       throw InvestmentApiException(
         'No internet connection. Please check your network and try again.',
       );
-    } on TimeoutException catch (e) {
+    } on TimeoutException catch (_) {
       throw InvestmentApiException(
         'Connection timeout. The server is taking too long to respond. Please try again.',
       );
-    } catch (e) {
+    } catch (_) {
       if (e.toString().contains('Failed host lookup') ||
           e.toString().contains('Connection refused')) {
         throw InvestmentApiException(
@@ -361,15 +361,15 @@ class ApiInvestmentRepository implements InvestmentRepository {
       rethrow;
     } on InvestmentApiException {
       rethrow;
-    } on SocketException catch (e) {
+    } on SocketException catch (_) {
       throw InvestmentApiException(
         'No internet connection. Please check your network and try again.',
       );
-    } on TimeoutException catch (e) {
+    } on TimeoutException catch (_) {
       throw InvestmentApiException(
         'Connection timeout. The server is taking too long to respond. Please try again.',
       );
-    } catch (e) {
+    } catch (_) {
       if (e.toString().contains('Failed host lookup') ||
           e.toString().contains('Connection refused')) {
         throw InvestmentApiException(
