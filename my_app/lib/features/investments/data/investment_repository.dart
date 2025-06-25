@@ -90,7 +90,7 @@ class ApiInvestmentRepository implements InvestmentRepository {
       throw InvestmentApiException(
         'Connection timeout. The server is taking too long to respond. Please try again.',
       );
-    } catch (_) {
+    } catch (e) {
       if (e.toString().contains('Failed host lookup') ||
           e.toString().contains('Connection refused')) {
         throw InvestmentApiException(
@@ -144,7 +144,7 @@ class ApiInvestmentRepository implements InvestmentRepository {
       throw InvestmentApiException(
         'Connection timeout. The server is taking too long to respond. Please try again.',
       );
-    } catch (_) {
+    } catch (e) {
       throw InvestmentApiException('Network error: ${e.toString()}');
     }
   }
@@ -219,7 +219,7 @@ class ApiInvestmentRepository implements InvestmentRepository {
       throw InvestmentApiException(
         'Connection timeout. The server is taking too long to respond. Please try again.',
       );
-    } catch (_) {
+    } catch (e) {
       // Catch any other network or parsing errors
       if (e.toString().contains('Failed host lookup') ||
           e.toString().contains('Connection refused')) {
@@ -309,7 +309,7 @@ class ApiInvestmentRepository implements InvestmentRepository {
       throw InvestmentApiException(
         'Connection timeout. The server is taking too long to respond. Please try again.',
       );
-    } catch (_) {
+    } catch (e) {
       if (e.toString().contains('Failed host lookup') ||
           e.toString().contains('Connection refused')) {
         throw InvestmentApiException(
@@ -369,7 +369,7 @@ class ApiInvestmentRepository implements InvestmentRepository {
       throw InvestmentApiException(
         'Connection timeout. The server is taking too long to respond. Please try again.',
       );
-    } catch (_) {
+    } catch (e) {
       if (e.toString().contains('Failed host lookup') ||
           e.toString().contains('Connection refused')) {
         throw InvestmentApiException(
