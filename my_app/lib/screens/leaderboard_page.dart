@@ -92,11 +92,11 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
                             margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: isTop3 ? colors[index] : AppColors.surfaceHighest,
+                                backgroundColor: isTop3 ? colors[index] : Theme.of(context).colorScheme.surfaceContainerHighest,
                                 child: Text(
                                   '#${index + 1}',
                                   style: TextStyle(
-                                    color: isTop3 ? Colors.black87 : AppColors.onSurface,
+                                    color: isTop3 ? Colors.black87 : Theme.of(context).colorScheme.onSurface,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
