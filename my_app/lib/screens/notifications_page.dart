@@ -59,11 +59,11 @@ class NotificationsPage extends StatelessWidget {
                     begin: const Offset(0.0, 0.5),
                     delay: Duration(milliseconds: 50 * index),
                     child: Card(
-                      color: isUnread ? AppColors.primaryContainer.withValues(alpha: 0.3) : AppColors.surface,
+                      color: isUnread ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3) : Theme.of(context).colorScheme.surface,
                       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: isUnread ? AppColors.primary : Colors.grey,
+                          backgroundColor: isUnread ? Theme.of(context).colorScheme.primary : Colors.grey,
                           child: Icon(
                             isUnread ? Icons.notifications_active : Icons.notifications,
                             color: Colors.white,
