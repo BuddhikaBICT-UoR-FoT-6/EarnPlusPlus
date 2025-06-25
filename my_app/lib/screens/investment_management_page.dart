@@ -141,19 +141,19 @@ class _InvestmentManagementView extends StatelessWidget {
                             delay: Duration(milliseconds: 50 * index),
                             child: InvestmentDetailCard(
                               investment: inv,
-                              onEdit: inv.id == null || controller.isMutating
+                              onEdit: controller.isMutating
                                   ? null
                                   : () => _openForm(
                                       context,
                                       controller: controller,
                                       existing: inv,
                                     ),
-                              onDelete: inv.id == null || controller.isMutating
+                              onDelete: controller.isMutating
                                   ? null
                                   : () => _confirmDelete(
                                       context,
                                       controller: controller,
-                                      id: inv.id!,
+                                      id: inv.id,
                                     ),
                             ),
                           ),
@@ -222,7 +222,7 @@ class _InvestmentManagementView extends StatelessWidget {
     final formKey = GlobalKey<FormState>();
 
     // this modal returns true only after in-dialog validation succeeds.
-    final shouldSave = await showDialog<bool>(
+    await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
@@ -313,7 +313,7 @@ class _InvestmentManagementView extends StatelessWidget {
                               asset: assetController.text.trim(),
                               amount: amountController.text.trim(),
                             );
-                          } else if (existing.id != null) {
+                          } else {
                             await controller.updateInvestment(
                               id: existing.id,
                               date: selectedDate,
