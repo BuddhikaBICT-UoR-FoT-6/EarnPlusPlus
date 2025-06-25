@@ -256,9 +256,9 @@ class _GoalCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 12,
-                backgroundColor: AppColors.surfaceHighest,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  progress >= 1.0 ? Colors.green : AppColors.primary,
+                  progress >= 1.0 ? Colors.green : Theme.of(context).colorScheme.primary,
                 ),
               ),
             ),
