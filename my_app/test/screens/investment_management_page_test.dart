@@ -1,37 +1,57 @@
-import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_app/features/investments/data/investment_repository.dart';
-import 'package:my_app/features/investments/domain/investment.dart';
+import 'package:my_app/features/investments/domain/investment_repository.dart';
+import 'package:my_app/features/investments/domain/investment_summary_dto.dart';
+import 'package:my_app/features/investments/domain/investment_detail_dto.dart';
 import 'package:my_app/features/investments/presentation/investment_controller.dart';
 import 'package:my_app/screens/investment_management_page.dart';
 
-class _FakeInvestmentRepository extends InvestmentRepository {
-  // this fake repository returns a fixed set of investments without making
-  // network requests, isolating the widget test from transport and authentication
-  // concerns. The deterministic data (a single AAPL stock investment from March 2)
-  // allows test assertions to verify that the investment list renders correctly,
-  // buttons appear, and the UI responds to controller state changes.
+class _FakeInvestmentRepository implements InvestmentRepository {
   @override
-  Future<List<Investment>> fetchInvestments() async {
+  Future<List<InvestmentSummaryDto>> fetchInvestments() async {
     return [
-      Investment(
+      InvestmentSummaryDto(
         id: 1,
-        date: DateTime(2025, 3, 2),
-        asset: 'AAPL',
-        amount: Decimal.parse('100.00'),
+        name: 'AAPL',
+        currentValue: 100.00,
+        plPercent: 0,
+        insightTags: [],
       ),
     ];
+  }
+
+  @override
+  Future<InvestmentDetailDto> createInvestment({
+    required DateTime date,
+    required String asset,
+    required String amount,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<InvestmentDetailDto> updateInvestment({
+    required int id,
+    required DateTime date,
+    required String asset,
+    required String amount,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> deleteInvestment(int id) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<InvestmentDetailDto> getInvestmentDetails(int id) async {
+    throw UnimplementedError();
   }
 }
 
 void main() {
   testWidgets('renders investment management list', (tester) async {
-    // the test initializes the controller with the fake repository and calls
-    // load() to populate the investment list before pumping the widget. This
-    // ensures the widget renders with real data loaded, allowing assertions to
-    // verify that the list displays investments, the add button appears, and edit/delete
-    // icons are present without having to simulate the async loading flow.
     final controller = InvestmentController(
       repository: _FakeInvestmentRepository(),
     );

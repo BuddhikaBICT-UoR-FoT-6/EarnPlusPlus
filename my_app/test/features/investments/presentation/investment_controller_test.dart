@@ -1,27 +1,26 @@
-import 'package:flutter_test/flutter_test.dart'; // imports the Flutter testing
-//framework, which provides tools for writing unit tests
-import 'package:my_app/features/investments/data/investment_repository.dart';
-import 'package:my_app/features/investments/domain/investment.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:my_app/features/investments/domain/investment_repository.dart';
+import 'package:my_app/features/investments/domain/investment_summary_dto.dart';
+import 'package:my_app/features/investments/domain/investment_detail_dto.dart';
 import 'package:my_app/features/investments/presentation/investment_controller.dart';
-import 'package:decimal/decimal.dart';
 
-class _FakeRepository extends InvestmentRepository {
+class _FakeRepository implements InvestmentRepository {
   _FakeRepository({
-    required List<Investment> result,
+    required List<InvestmentSummaryDto> result,
     this.created,
     this.updated,
     this.throwUnauthorized = false,
     this.throwOnMutation = false,
   }) : _result = result;
 
-  final List<Investment> _result;
+  final List<InvestmentSummaryDto> _result;
   final bool throwUnauthorized;
   final bool throwOnMutation;
-  final Investment? created;
-  final Investment? updated;
+  final InvestmentDetailDto? created;
+  final InvestmentDetailDto? updated;
 
   @override
-  Future<List<Investment>> fetchInvestments() async {
+  Future<List<InvestmentSummaryDto>> fetchInvestments() async {
     if (throwUnauthorized) {
       throw const InvestmentUnauthorizedException();
     }
@@ -29,7 +28,7 @@ class _FakeRepository extends InvestmentRepository {
   }
 
   @override
-  Future<Investment> createInvestment({
+  Future<InvestmentDetailDto> createInvestment({
     required DateTime date,
     required String asset,
     required String amount,
@@ -41,16 +40,20 @@ class _FakeRepository extends InvestmentRepository {
       throw const InvestmentApiException('mutation failed');
     }
     return created ??
-        Investment(
+        InvestmentDetailDto(
           id: 99,
-          date: date,
-          asset: asset,
-          amount: Decimal.parse(amount),
+          userId: 1,
+          assetName: asset,
+          amount: double.parse(amount),
+          date: date.toIso8601String(),
+          riskLevel: 'Low',
+          category: 'Stock',
+          plPercent: 0,
         );
   }
 
   @override
-  Future<Investment> updateInvestment({
+  Future<InvestmentDetailDto> updateInvestment({
     required int id,
     required DateTime date,
     required String asset,
@@ -63,11 +66,15 @@ class _FakeRepository extends InvestmentRepository {
       throw const InvestmentApiException('mutation failed');
     }
     return updated ??
-        Investment(
+        InvestmentDetailDto(
           id: id,
-          date: date,
-          asset: asset,
-          amount: Decimal.parse(amount),
+          userId: 1,
+          assetName: asset,
+          amount: double.parse(amount),
+          date: date.toIso8601String(),
+          riskLevel: 'Low',
+          category: 'Stock',
+          plPercent: 0,
         );
   }
 
@@ -80,6 +87,11 @@ class _FakeRepository extends InvestmentRepository {
       throw const InvestmentApiException('mutation failed');
     }
   }
+
+  @override
+  Future<InvestmentDetailDto> getInvestmentDetails(int id) async {
+    return created!;
+  }
 }
 
 void main() {
@@ -87,17 +99,19 @@ void main() {
     final controller = InvestmentController(
       repository: _FakeRepository(
         result: [
-          Investment(
+          InvestmentSummaryDto(
             id: 1,
-            date: DateTime(2025, 2, 1),
-            asset: 'AAPL',
-            amount: Decimal.parse('10.25'),
+            name: 'AAPL',
+            currentValue: 10.25,
+            plPercent: 0,
+            insightTags: [],
           ),
-          Investment(
+          InvestmentSummaryDto(
             id: 2,
-            date: DateTime(2025, 2, 2),
-            asset: 'AAPL',
-            amount: Decimal.parse('5.75'),
+            name: 'AAPL',
+            currentValue: 5.75,
+            plPercent: 0,
+            insightTags: [],
           ),
         ],
       ),
@@ -107,7 +121,7 @@ void main() {
 
     expect(controller.state, InvestmentLoadState.success);
     expect(controller.investments.length, 2);
-    expect(controller.totalInvested, Decimal.parse('16.00'));
+    expect(controller.totalInvested, 16.0);
   });
 
   test('load unauthorized updates state', () async {
@@ -124,18 +138,23 @@ void main() {
     final controller = InvestmentController(
       repository: _FakeRepository(
         result: [
-          Investment(
+          InvestmentSummaryDto(
             id: 2,
-            date: DateTime(2025, 2, 1),
-            asset: 'AAPL',
-            amount: Decimal.parse('10.00'),
+            name: 'AAPL',
+            currentValue: 10.00,
+            plPercent: 0,
+            insightTags: [],
           ),
         ],
-        created: Investment(
+        created: InvestmentDetailDto(
           id: 1,
-          date: DateTime(2025, 2, 3),
-          asset: 'MSFT',
-          amount: Decimal.parse('20.00'),
+          userId: 1,
+          assetName: 'MSFT',
+          amount: 20.0,
+          date: DateTime(2025, 2, 3).toIso8601String(),
+          riskLevel: 'Low',
+          category: 'Stock',
+          plPercent: 0,
         ),
       ),
     );
@@ -153,17 +172,22 @@ void main() {
   });
 
   test('updateInvestment replaces matching item on success', () async {
-    final original = Investment(
+    final original = InvestmentSummaryDto(
       id: 7,
-      date: DateTime(2025, 2, 1),
-      asset: 'AAPL',
-      amount: Decimal.parse('10.00'),
+      name: 'AAPL',
+      currentValue: 10.00,
+      plPercent: 0,
+      insightTags: [],
     );
-    final updated = Investment(
+    final updated = InvestmentDetailDto(
       id: 7,
-      date: DateTime(2025, 2, 1),
-      asset: 'AAPL',
-      amount: Decimal.parse('11.00'),
+      userId: 1,
+      assetName: 'AAPL',
+      amount: 11.0,
+      date: DateTime(2025, 2, 1).toIso8601String(),
+      riskLevel: 'Low',
+      category: 'Stock',
+      plPercent: 0,
     );
 
     final controller = InvestmentController(
@@ -179,18 +203,19 @@ void main() {
     );
 
     expect(ok, isTrue);
-    expect(controller.investments.first.amount, Decimal.parse('11.00'));
+    expect(controller.investments.first.currentValue, 11.0);
   });
 
   test('deleteInvestment removes matching item on success', () async {
     final controller = InvestmentController(
       repository: _FakeRepository(
         result: [
-          Investment(
+          InvestmentSummaryDto(
             id: 4,
-            date: DateTime(2025, 2, 1),
-            asset: 'AAPL',
-            amount: Decimal.parse('10.00'),
+            name: 'AAPL',
+            currentValue: 10.00,
+            plPercent: 0,
+            insightTags: [],
           ),
         ],
       ),
