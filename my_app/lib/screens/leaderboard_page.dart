@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../config/app_config.dart';
 import '../core/constants/app_spacing.dart';
-import '../core/theme/app_colors.dart';
+
 import '../core/widgets/animated_widgets.dart';
 import '../services/auth_service.dart';
 
