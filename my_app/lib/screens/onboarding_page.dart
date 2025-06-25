@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/theme/app_colors.dart';
-import '../core/widgets/app_button.dart';
+
 import 'login_page.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -97,7 +97,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   width: _currentPage == index ? 24 : 8,
                   decoration: BoxDecoration(
                     color: _currentPage == index
-                        ? AppColors.primaryGradientStart
+                        ? Theme.of(context).colorScheme.primary
                         : Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(4),
                   ),
@@ -107,10 +107,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
             const SizedBox(height: 40),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: AppButton(
-                label: _currentPage == _onboardingData.length - 1
-                    ? 'Get Started'
-                    : 'Next',
+              child: ElevatedButton(
+                child: Text(
+                  _currentPage == _onboardingData.length - 1
+                      ? 'Get Started'
+                      : 'Next',
+                ),
                 onPressed: () {
                   if (_currentPage == _onboardingData.length - 1) {
                     _completeOnboarding();
