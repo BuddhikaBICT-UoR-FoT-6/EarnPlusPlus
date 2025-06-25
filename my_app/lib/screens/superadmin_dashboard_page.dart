@@ -109,7 +109,7 @@ class _SuperAdminDashboardView extends StatelessWidget {
         Expanded(
           child: ListView.separated(
             itemCount: controller.users.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
+            separatorBuilder: (context, index) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final user = controller.users[index];
               return ListTile(
