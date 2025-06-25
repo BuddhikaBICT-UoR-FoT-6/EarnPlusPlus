@@ -227,7 +227,7 @@ class _DashboardView extends StatelessWidget {
                             .investments;
                         final total = investments.fold<double>(
                           0.0,
-                          (sum, inv) => sum + inv.amount.toDouble(),
+                          (sum, inv) => sum + inv.currentValue,
                         );
                         return DrawerHeader(
                           child: Column(
@@ -584,16 +584,12 @@ class _DashboardView extends StatelessWidget {
                                       child: ListTile(
                                         dense: true,
                                         title: Text(
-                                          '${inv.asset} - ${formatDollar(inv.amount.toDouble())}',
+                                          '${inv.name} - ${formatDollar(inv.currentValue)}',
                                         ),
                                         subtitle: Text(
-                                          inv.date
-                                              .toLocal()
-                                              .toIso8601String()
-                                              .split('T')
-                                              .first,
+                                          '${inv.plPercent > 0 ? '+' : ''}${inv.plPercent}% P/L',
                                         ),
-                                      ),
+                                        trailing: const Icon(Icons.chevron_right),),
                                     );
                                   },
                                 ),
@@ -848,7 +844,7 @@ class _InsightMetricTile extends StatelessWidget {
 }
 
 class _AssetAllocationPie extends StatelessWidget {
-  final List<Investment> investments;
+  final List<InvestmentSummaryDto> investments;
 
   const _AssetAllocationPie({required this.investments});
 
@@ -1023,7 +1019,7 @@ class _AuditTimelinePanel extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              '${decimalToFixed(Decimal.parse(inv.currentValue.toString()), fractionDigits: 2)}',
+                              '${inv.currentValue.toStringAsFixed(2)}',
                               style: TextStyle(
                                 color: Theme.of(context).hintColor,
                               ),
@@ -1275,13 +1271,13 @@ class _DashboardLoadingShimmer extends StatelessWidget {
 // Investment objects as input and generates a series of FlSpot points for the
 // chart based on the amount of each investment.
 class _SimpleLineChart extends StatelessWidget {
-  final List<Investment> investments;
+  final List<InvestmentSummaryDto> investments;
 
   const _SimpleLineChart({
     super.key,
     required this.investments,
   }); // the constructor for the
-  // _SimpleLineChart widget takes a list of Investment objects as a required parameter,
+  // _SimpleLineChart widget takes a list of InvestmentSummaryDto objects as a required parameter,
   // ensuring that the widget is properly initialized with the necessary data to
   // generate the line chart based on the invested amounts over time.
 
@@ -1294,18 +1290,18 @@ class _SimpleLineChart extends StatelessWidget {
     // the spots variable is created by mapping each investment to an FlSpot, which
     // represents a point on the line chart. The x value of each spot is the index
     // of the investment in the list (converted to double), and the y value is the
-    // amount of the investment (also converted to double). This allows the line chart
+    // currentValue of the investment (also converted to double). This allows the line chart
     // to display the investments in the correct order and with the correct values.
     final spots = investments
         .asMap()
         .entries
-        .map((e) => FlSpot(e.key.toDouble(), e.value.amount.toDouble()))
+        .map((e) => FlSpot(e.key.toDouble(), e.value.currentValue.toDouble()))
         .toList();
 
     // the maxAmount variable is calculated by mapping the investments to their
-    // amounts and using the reduce method to find the maximum amount.
+    // currentValue and using the reduce method to find the maximum amount.
     final maxAmount = investments
-        .map((e) => e.amount)
+        .map((e) => e.currentValue)
         .reduce((a, b) => a > b ? a : b)
         .toDouble();
 
