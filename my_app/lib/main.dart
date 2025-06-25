@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/constants/app_strings.dart';
 import 'core/theme/app_theme.dart';
 import 'services/auth_service.dart';
-import 'features/investments/data/registration_db.dart';
 import 'services/telemetry_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_page.dart';
@@ -19,21 +18,20 @@ Future<void> main() async {
   // Phase 17: Global Error Handling Boundary
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
-    TelemetryService.instance.logEvent('flutter_error', parameters: {
+    TelemetryService.instance.logEvent('flutter_error', data: {
       'error': details.exceptionAsString(),
       'stack': details.stack.toString(),
     });
   };
   
   PlatformDispatcher.instance.onError = (error, stack) {
-    TelemetryService.instance.logEvent('platform_error', parameters: {
+    TelemetryService.instance.logEvent('platform_error', data: {
       'error': error.toString(),
       'stack': stack.toString(),
     });
     return true;
   };
 
-  await RegistrationDb.initializeAtAppLaunch();
   TelemetryService.instance.initialize();
   TelemetryService.instance.logEvent('app_start');
   runApp(
