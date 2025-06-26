@@ -10,7 +10,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:my_app/main.dart';
 import 'package:provider/provider.dart';
-import 'package:my_app/core/theme/theme_controller.dart';
 
 void main() {
   // the testWidgets function defines a widget test that verifies the initial
