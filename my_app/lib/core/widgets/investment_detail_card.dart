@@ -110,35 +110,33 @@ class _InvestmentDetailCardState extends State<InvestmentDetailCard> {
                 ),
               ],
             ),
-            trailing: SizedBox(
-              width: 120,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (widget.onEdit != null)
-                    IconButton(
-                      tooltip: 'Edit',
-                      onPressed: widget.onEdit,
-                      icon: const Icon(Icons.edit_outlined),
-                      iconSize: 20,
-                    ),
-                  if (widget.onDelete != null)
-                    IconButton(
-                      tooltip: 'Delete',
-                      onPressed: widget.onDelete,
-                      icon: const Icon(Icons.delete_outline),
-                      iconSize: 20,
-                    ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (widget.onEdit != null)
                   IconButton(
-                    tooltip: 'Details',
-                    onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                    icon: Icon(
-                      _isExpanded ? Icons.expand_less : Icons.expand_more,
-                    ),
+                    tooltip: 'Edit',
+                    onPressed: widget.onEdit,
+                    icon: const Icon(Icons.edit_outlined),
                     iconSize: 20,
                   ),
-                ],
-              ),
+                if (widget.onDelete != null)
+                  IconButton(
+                    tooltip: 'Delete',
+                    onPressed: widget.onDelete,
+                    icon: const Icon(Icons.delete_outline),
+                    iconSize: 20,
+                  ),
+                IconButton(
+                  tooltip: 'Details',
+                  onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                  icon: Icon(
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                  ),
+                  iconSize: 20,
+                ),
+              ],
             ),
           ),
           if (_isExpanded) ...[

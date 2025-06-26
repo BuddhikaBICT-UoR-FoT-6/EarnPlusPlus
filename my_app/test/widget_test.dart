@@ -11,6 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:my_app/main.dart';
 import 'package:provider/provider.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 void main() {
   // the testWidgets function defines a widget test that verifies the initial
   // loading state of the app when it boots up. It pumps the MyApp widget and
@@ -20,6 +22,8 @@ void main() {
   testWidgets('App boots and shows auth loading state', (
     WidgetTester tester,
   ) async {
+    SharedPreferences.setMockInitialValues({});
+    
     await tester.pumpWidget(
       ChangeNotifierProvider<ThemeController>(
         create: (_) => ThemeController(),
@@ -29,9 +33,10 @@ void main() {
 
     expect(find.text('Earn++'), findsOneWidget);
     
-    // Advance time by 1.8 seconds to trigger the Future.delayed in MyApp._isLoggedIn
-    await tester.pump(const Duration(milliseconds: 1800));
+    // Advance time by enough seconds to trigger the Future.delayed in MyApp._isLoggedIn
+    await tester.pump(const Duration(milliseconds: 2000));
     // Wait for the navigation transition to complete
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 1000));
+    await tester.pump(const Duration(milliseconds: 1000));
   });
 }
