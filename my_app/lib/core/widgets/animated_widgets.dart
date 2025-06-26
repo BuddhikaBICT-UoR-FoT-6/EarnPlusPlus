@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
@@ -26,6 +27,8 @@ class _AnimatedFadeInState extends State<AnimatedFadeIn>
   late AnimationController _controller;
   late Animation<double> _opacity;
 
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
@@ -36,13 +39,18 @@ class _AnimatedFadeInState extends State<AnimatedFadeIn>
       end: 1.0,
     ).animate(CurvedAnimation(parent: _controller, curve: widget.curve));
 
-    Future.delayed(widget.delay, () {
+    if (widget.delay == Duration.zero) {
       if (mounted) _controller.forward();
-    });
+    } else {
+      _timer = Timer(widget.delay, () {
+        if (mounted) _controller.forward();
+      });
+    }
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -78,6 +86,8 @@ class _AnimatedScaleInState extends State<AnimatedScaleIn>
   late AnimationController _controller;
   late Animation<double> _scale;
 
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
@@ -88,13 +98,18 @@ class _AnimatedScaleInState extends State<AnimatedScaleIn>
       end: 1.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
 
-    Future.delayed(widget.delay, () {
+    if (widget.delay == Duration.zero) {
       if (mounted) _controller.forward();
-    });
+    } else {
+      _timer = Timer(widget.delay, () {
+        if (mounted) _controller.forward();
+      });
+    }
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -132,6 +147,8 @@ class _AnimatedSlideInState extends State<AnimatedSlideIn>
   late AnimationController _controller;
   late Animation<Offset> _offset;
 
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
@@ -142,13 +159,18 @@ class _AnimatedSlideInState extends State<AnimatedSlideIn>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: widget.curve));
 
-    Future.delayed(widget.delay, () {
+    if (widget.delay == Duration.zero) {
       if (mounted) _controller.forward();
-    });
+    } else {
+      _timer = Timer(widget.delay, () {
+        if (mounted) _controller.forward();
+      });
+    }
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -189,6 +211,8 @@ class _AnimatedCardState extends State<AnimatedCard>
   late Animation<double> _opacity;
   late Animation<double> _scale;
 
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
@@ -204,13 +228,18 @@ class _AnimatedCardState extends State<AnimatedCard>
       end: 1.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
-    Future.delayed(widget.delay, () {
+    if (widget.delay == Duration.zero) {
       if (mounted) _controller.forward();
-    });
+    } else {
+      _timer = Timer(widget.delay, () {
+        if (mounted) _controller.forward();
+      });
+    }
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
