@@ -25,6 +25,11 @@ class AppConfig {
     defaultValue: '',
   );
 
+  static const String geminiApiKey = String.fromEnvironment(
+    'GEMINI_API_KEY',
+    defaultValue: '',
+  );
+
   static String get baseUrl {
     // if the _apiBaseUrl is not empty, then it means that the API base URL has been
     // overridden through environment variables, so we return that value directly.

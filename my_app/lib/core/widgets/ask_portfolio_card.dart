@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../features/investments/presentation/smart_insight_controller.dart';
+import '../../features/investments/presentation/investment_controller.dart';
 import '../constants/app_spacing.dart';
 
 class AskPortfolioCard extends StatefulWidget {
@@ -41,7 +42,8 @@ class _AskPortfolioCardState extends State<AskPortfolioCard>
 
   void _submitQuery(String query) {
     if (query.trim().isEmpty) return;
-    context.read<SmartInsightController>().askPortfolio(query);
+    final investments = context.read<InvestmentController>().investments;
+    context.read<SmartInsightController>().askPortfolio(query, investments);
     _queryController.clear();
   }
 
