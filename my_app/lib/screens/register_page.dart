@@ -7,6 +7,7 @@ import 'package:provider/provider.dart'; // imports the Provider package, which 
 //widgets to listen for changes and rebuild when necessary without the need for
 //complex state management patterns.
 
+import '../core/theme/app_colors.dart'; // imports the AppColors class
 import '../core/validation/input_validators.dart'; // imports a custom InputValidators
 // class that contains static methods for validating user input
 import '../features/auth/presentation/register_controller.dart'; // imports the
