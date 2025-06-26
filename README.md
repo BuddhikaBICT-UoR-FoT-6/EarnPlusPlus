@@ -85,17 +85,11 @@ The backend extracts the authenticated user from JWT and filters investment data
 - Early architecture decisions compound; small shortcuts become expensive later.
 - Writing reflective documentation improves technical decision quality.
 
-## Recent Product Enhancements
+## Changelog & Release History
 
-The latest delivery phase focused on turning the dashboard from a baseline feature
-into a production-grade experience:
+A complete, detailed history of every change, feature addition, and architectural decision from the initial commit onward is documented in the [CHANGELOG.md](./CHANGELOG.md).
 
-- Portfolio Insights panel with allocation and performance summary.
-- Smart notification center with user preference toggles.
-- Micro-interactions for filter transitions, card feedback, and chart tooltips.
-- Audit/history timeline to improve trust and traceability.
+The project adheres to [Semantic Versioning](https://semver.org/) and [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) formats.
 
-All of these were implemented via separate atomic commits with scheduled dates to keep
-history clean and reviewable.
-
-
+---
+*Built with Flutter, Shelf, and MySQL.*
