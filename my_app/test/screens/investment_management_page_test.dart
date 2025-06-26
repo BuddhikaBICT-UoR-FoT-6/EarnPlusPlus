@@ -61,7 +61,7 @@ void main() {
       MaterialApp(home: InvestmentManagementPage(controller: controller)),
     );
 
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('Manage Investments'), findsOneWidget);
     expect(find.text('AAPL'), findsOneWidget);

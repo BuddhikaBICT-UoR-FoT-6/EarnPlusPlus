@@ -20,9 +20,7 @@ class _FakeAuthService extends AuthService {
   String? lastPassword;
 
   @override
-  Future<void> register({
-    // simulates the registration process. It stores the provided email and
-    // password in the lastEmail and lastPassword variables for verification in tests.
+  Future<void> startRegisterOtp({
     required String email,
     required String password,
   }) async {

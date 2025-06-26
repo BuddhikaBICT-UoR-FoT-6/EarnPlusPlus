@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:my_app/main.dart';
+import 'package:provider/provider.dart';
+import 'package:my_app/core/theme/theme_controller.dart';
 
 void main() {
   // the testWidgets function defines a widget test that verifies the initial
@@ -19,7 +21,12 @@ void main() {
   testWidgets('App boots and shows auth loading state', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(
+      ChangeNotifierProvider<ThemeController>(
+        create: (_) => ThemeController(),
+        child: const MyApp(),
+      ),
+    );
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });

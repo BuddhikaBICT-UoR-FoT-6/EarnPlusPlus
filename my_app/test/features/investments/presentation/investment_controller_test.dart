@@ -4,6 +4,7 @@ import 'package:my_app/features/investments/data/investment_repository.dart'; //
 import 'package:my_app/features/investments/domain/investment_summary_dto.dart';
 import 'package:my_app/features/investments/domain/investment_detail_dto.dart';
 import 'package:my_app/features/investments/presentation/investment_controller.dart';
+import 'package:decimal/decimal.dart';
 
 class _FakeRepository implements InvestmentRepository {
   _FakeRepository({
@@ -119,7 +120,7 @@ void main() {
 
     expect(controller.state, InvestmentLoadState.success);
     expect(controller.investments.length, 2);
-    expect(controller.totalInvested, 16.0);
+    expect(controller.totalInvested, Decimal.parse('16.0'));
   });
 
   test('load unauthorized updates state', () async {
@@ -232,6 +233,6 @@ void main() {
     );
 
     expect(ok, isFalse);
-    expect(controller.actionError, contains('Failed to add investment'));
+    expect(controller.actionError, contains('mutation failed'));
   });
 }

@@ -32,5 +32,10 @@ void main() {
 
     // Should be loading
     expect(controller.isLoading, isTrue);
+
+    // Wait for the mock Future.delayed to finish to prevent pending timer error
+    // We use pump instead of pumpAndSettle because AskPortfolioCard has a repeating background animation
+    await tester.pump(const Duration(seconds: 3));
+    expect(controller.isLoading, isFalse);
   });
 }
