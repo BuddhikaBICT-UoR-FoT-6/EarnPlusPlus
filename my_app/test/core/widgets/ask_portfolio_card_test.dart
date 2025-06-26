@@ -4,15 +4,22 @@ import 'package:provider/provider.dart';
 import 'package:my_app/core/widgets/ask_portfolio_card.dart';
 import 'package:my_app/features/investments/presentation/smart_insight_controller.dart';
 
+import 'package:my_app/features/investments/presentation/investment_controller.dart';
+import 'package:my_app/features/investments/data/in_memory_investment_repository.dart';
+
 void main() {
   testWidgets('AskPortfolioCard renders search box and handles query', (WidgetTester tester) async {
     final controller = SmartInsightController();
+    final invController = InvestmentController(repository: InMemoryInvestmentRepository());
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ChangeNotifierProvider<SmartInsightController>.value(
-            value: controller,
+          body: MultiProvider(
+            providers: [
+              ChangeNotifierProvider<SmartInsightController>.value(value: controller),
+              ChangeNotifierProvider<InvestmentController>.value(value: invController),
+            ],
             child: const AskPortfolioCard(),
           ),
         ),
