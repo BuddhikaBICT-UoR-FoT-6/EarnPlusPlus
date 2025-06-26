@@ -3,14 +3,38 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:my_app/core/widgets/ask_portfolio_card.dart';
 import 'package:my_app/features/investments/presentation/smart_insight_controller.dart';
-
 import 'package:my_app/features/investments/presentation/investment_controller.dart';
-import 'package:my_app/features/investments/data/in_memory_investment_repository.dart';
+import 'package:my_app/features/investments/domain/investment_repository.dart';
+import 'package:my_app/features/investments/domain/investment_summary_dto.dart';
+import 'package:my_app/features/investments/domain/investment_detail_dto.dart';
+
+class _FakeRepository implements InvestmentRepository {
+  @override
+  Future<List<InvestmentSummaryDto>> fetchInvestments() async => [];
+
+  @override
+  Future<InvestmentDetailDto> createInvestment({required DateTime date, required String asset, required String amount}) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> deleteInvestment(int id) async {}
+
+  @override
+  Future<InvestmentDetailDto> getInvestmentDetails(int id) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<InvestmentDetailDto> updateInvestment({required int id, required DateTime date, required String asset, required String amount}) async {
+    throw UnimplementedError();
+  }
+}
 
 void main() {
   testWidgets('AskPortfolioCard renders search box and handles query', (WidgetTester tester) async {
     final controller = SmartInsightController();
-    final invController = InvestmentController(repository: InMemoryInvestmentRepository());
+    final invController = InvestmentController(repository: _FakeRepository());
 
     await tester.pumpWidget(
       MaterialApp(
