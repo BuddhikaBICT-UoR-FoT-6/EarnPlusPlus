@@ -1,6 +1,7 @@
 import 'dart:convert'; // encode decode json
 import 'package:http/http.dart' as http; // send post requests to backend
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // save login token securely
+import 'package:flutter/foundation.dart';
 import '../config/app_config.dart';
 
 class AuthService {
@@ -8,37 +9,30 @@ class AuthService {
       'auth_token'; // identify the token when saving it to the phone's storage
   static const String _refreshTokenKey = 'refresh_token';
   static const FlutterSecureStorage _secureStorage =
-      FlutterSecureStorage(); // instance of
-  // FlutterSecureStorage to handle secure storage operations such as saving,
-  // retrieving, and deleting the authentication token on the device securely
-  // using platform-specific secure storage mechanisms like Keychain on iOS and
-  // EncryptedSharedPreferences on Android to protect sensitive data like
-  //authentication tokens from unauthorized access and ensure that the user's
-  // login state is maintained securely across app sessions and app restarts
+      FlutterSecureStorage();
 
   Future<void> register({
     required String email,
     required String password,
   }) async {
-    // Legacy method kept for compatibility: starts OTP-based registration.
     await startRegisterOtp(email: email, password: password);
   }
 
-  // Starts registration by requesting OTP to be sent to email.
   Future<void> startRegisterOtp({
     required String email,
     required String password,
   }) async {
+    if (kIsWeb && AppConfig.baseUrl == 'https://api.earnplusplus.com') {
+      // Mock for GitHub Pages Web Demo
+      await Future.delayed(const Duration(seconds: 1));
+      return; 
+    }
+
     final resp = await http
         .post(
           Uri.parse('${AppConfig.baseUrl}/auth/register/send-otp'),
-          headers: const {
-            'Content-Type': 'application/json',
-          }, // tell server the data being sent is in json format
-          body: jsonEncode({
-            'email': email,
-            'password': password,
-          }), // converts the Map of user credentials into a raw json string
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email, 'password': password}),
         )
         .timeout(const Duration(seconds: 8));
 
@@ -47,11 +41,19 @@ class AuthService {
     }
   }
 
-  // Completes registration after user enters OTP sent to their email.
   Future<void> verifyRegisterOtp({
     required String email,
     required String otp,
   }) async {
+    if (kIsWeb && AppConfig.baseUrl == 'https://api.earnplusplus.com') {
+      // Mock for GitHub Pages Web Demo
+      await Future.delayed(const Duration(seconds: 1));
+      if (otp != '123456') {
+        throw Exception('Invalid OTP. Use 123456 for web demo.');
+      }
+      return;
+    }
+
     final resp = await http
         .post(
           Uri.parse('${AppConfig.baseUrl}/auth/register/verify'),
@@ -65,8 +67,18 @@ class AuthService {
     }
   }
 
-  // send login req to backend and save the returned token to the phone's storage for future authenticated requests
   Future<void> login({required String email, required String password}) async {
+    if (kIsWeb && AppConfig.baseUrl == 'https://api.earnplusplus.com') {
+      // Mock for GitHub Pages Web Demo
+      await Future.delayed(const Duration(seconds: 1));
+      if (email.isNotEmpty && password.length >= 6) {
+        await _secureStorage.write(key: _tokenKey, value: 'mock_token_web');
+        await _secureStorage.write(key: _refreshTokenKey, value: 'mock_refresh_web');
+        return;
+      }
+      throw Exception('Invalid credentials.');
+    }
+
     final resp = await http.post(
       Uri.parse('${AppConfig.baseUrl}/auth/login'),
       headers: const {'Content-Type': 'application/json'},
@@ -77,26 +89,15 @@ class AuthService {
       throw Exception(_extractMessage(resp.body));
     }
 
-    // takes the response string from the server and turns it back into a dart map
     final data = jsonDecode(resp.body) as Map<String, dynamic>;
-    final token = (data['token'] ?? '')
-        .toString(); // looks for the key token in the server's response
+    final token = (data['token'] ?? '').toString();
     final refreshToken = (data['refresh_token'] ?? '').toString();
 
-    if (token.isEmpty) {
-      throw Exception('Missing token in server response');
-    }
+    if (token.isEmpty) throw Exception('Missing token in server response');
+    if (refreshToken.isEmpty) throw Exception('Missing refresh token in server response');
 
-    if (refreshToken.isEmpty) {
-      throw Exception('Missing refresh token in server response');
-    }
-
-    await _secureStorage.write(key: _tokenKey, value: token); // saves the token
+    await _secureStorage.write(key: _tokenKey, value: token);
     await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
-    // to the phone's secure storage with the key _tokenKey for later retrieval
-    // when making authenticated requests to the backend, allowing the app to maintain
-    // the user's login state across sessions and app restarts without requiring
-    // the user to log in again until the token expires or is deleted
   }
 
   // retrieves the saved string from storage
