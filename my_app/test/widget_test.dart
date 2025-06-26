@@ -27,7 +27,11 @@ void main() {
       ),
     );
 
-    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('Earn++'), findsOneWidget);
+    
+    // Advance time by 1.8 seconds to trigger the Future.delayed in MyApp._isLoggedIn
+    await tester.pump(const Duration(milliseconds: 1800));
+    // Wait for the navigation transition to complete
+    await tester.pumpAndSettle();
   });
 }

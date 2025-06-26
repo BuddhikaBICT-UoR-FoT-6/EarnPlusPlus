@@ -61,7 +61,10 @@ void main() {
       MaterialApp(home: InvestmentManagementPage(controller: controller)),
     );
 
-    await tester.pumpAndSettle();
+    // Pump to trigger build
+    await tester.pump();
+    // Pump enough time to allow animations (AnimatedSlideIn, AnimatedFadeIn) to complete
+    await tester.pump(const Duration(milliseconds: 1500));
 
     expect(find.text('Manage Investments'), findsOneWidget);
     expect(find.text('AAPL'), findsOneWidget);
