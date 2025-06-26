@@ -101,6 +101,41 @@ class _RegisterViewState extends State<_RegisterView> {
       context,
     ).unfocus(); // unfocuses any active text fields to dismiss
     // the keyboard when the user taps the submit button or tries to submit the form.
+
+    // Check individual fields to show specific toast messages
+    final emailError = InputValidators.email(_emailController.text);
+    if (emailError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(emailError),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    final passwordError = InputValidators.password(_passwordController.text);
+    if (passwordError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(passwordError),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    final confirmError = InputValidators.confirmPassword(_passwordController.text, _confirmController.text);
+    if (confirmError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(confirmError),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
     if (!_formKey.currentState!.validate()) return; // validates the form fields
     // preventing the registration from proceeding if any fields are invalid or
     //missing. using the form key. If any of the validators fail, the form will

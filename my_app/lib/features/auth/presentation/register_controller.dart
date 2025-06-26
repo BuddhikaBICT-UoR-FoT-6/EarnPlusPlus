@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart'; // imports the foundation library,
 // and functions for Flutter applications, including ChangeNotifier for state
 // management and other foundational utilities.
 
+import '../../../config/app_config.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/registration_queue.dart';
 
@@ -16,10 +17,7 @@ class RegisterController extends ChangeNotifier {
   }) : _authService = authService ?? AuthService(),
        _queueService =
            queueService ??
-           RegistrationQueueService('http://10.0.2.2:8080'); // the
-  // constructor allows for dependency injection of the AuthService and
-  // RegistrationQueueService, which enables easier testing and flexibility
-  // in swapping out the services if needed.
+           RegistrationQueueService(AppConfig.baseUrl);
 
   bool isSubmitting = false;
   String? error;

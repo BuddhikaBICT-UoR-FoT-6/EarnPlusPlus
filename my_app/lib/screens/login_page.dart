@@ -49,6 +49,30 @@ class _LoginViewState extends State<_LoginView> {
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
+
+    // Check individual fields to show specific toast messages
+    final emailError = InputValidators.email(_emailController.text);
+    if (emailError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(emailError),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    final passwordError = InputValidators.password(_passwordController.text);
+    if (passwordError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(passwordError),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     final controller = context.read<LoginController>();

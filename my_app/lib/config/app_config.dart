@@ -43,6 +43,11 @@ class AppConfig {
       return 'https://staging-api.earnplusplus.com';
     }
 
+    // Since Web running on GitHub pages requires HTTPS and cannot reach 10.0.2.2
+    if (const bool.fromEnvironment('dart.library.js_util')) {
+      return 'https://api.earnplusplus.com'; // Mock/Fallback for Web to avoid Mixed Content
+    }
+
     // for development and any other environments, we return the local API URL,
     // which is typically used for local development and testing. Note that when
     // running on an Android emulator, 'localhost' refers to the emulator itself,
