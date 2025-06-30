@@ -13,6 +13,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        
     - uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.10.x'
@@ -33,3 +38,19 @@ jobs:
     - name: Build Web App
       working-directory: ./my_app
       run: flutter build web --release
+
+    - name: Build Android APK
+      working-directory: ./my_app
+      run: flutter build apk --release
+
+    - name: Upload Web Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: earn-plus-plus-web
+        path: my_app/build/web/
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: earn-plus-plus-apk
+        path: my_app/build/app/outputs/flutter-apk/app-release.apk
